@@ -30,9 +30,9 @@ import {
 import type { Product } from '@/lib/types';
 import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { fetchProducts } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
 import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
+import { getTrendingProducts } from '@/ai/flows/get-trending-products';
 import { Separator } from '../ui/separator';
 
 export function ProductTable() {
@@ -47,9 +47,15 @@ export function ProductTable() {
   useEffect(() => {
     const getProducts = async () => {
       setIsLoading(true);
-      const fetchedProducts = await fetchProducts();
-      setProducts(fetchedProducts);
-      setIsLoading(false);
+      try {
+        const fetchedProducts = await getTrendingProducts();
+        setProducts(fetchedProducts);
+      } catch (error) {
+        console.error("Failed to fetch trending products:", error);
+        // Optionally, set an error state here to show in the UI
+      } finally {
+        setIsLoading(false);
+      }
     };
     getProducts();
   }, []);
@@ -96,9 +102,9 @@ export function ProductTable() {
     <>
     <Card>
       <CardHeader>
-        <CardTitle>Products</CardTitle>
+        <CardTitle>Trending Products</CardTitle>
         <CardDescription>
-          Manage your products and view their demand forecasts.
+          AI-generated list of currently trending products.
         </CardDescription>
       </CardHeader>
       <CardContent>
