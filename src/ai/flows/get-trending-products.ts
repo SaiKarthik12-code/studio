@@ -18,7 +18,7 @@ const TrendingProductSchema = z.object({
   forecastedDemand: z.number().describe('The estimated weekly demand for this product.'),
   inventoryStatus: z.enum(['Optimal', 'Overstock', 'Understock']).describe('The current inventory status based on the trend.'),
   lastUpdated: z.string().describe("A human-readable string indicating when this data was generated, e.g., 'Just now'."),
-  imageUrl: z.string().describe('A placeholder image URL for the product. It must be a valid URL from https://placehold.co.'),
+  imageUrl: z.string().describe('A placeholder image URL for the product.'),
 });
 
 const TrendingProductsOutputSchema = z.object({
@@ -45,7 +45,7 @@ For each product, provide the following information:
 - A forecasted weekly demand as a number.
 - An inventory status ('Understock', 'Optimal', 'Overstock'). If a product is very trendy, it should be 'Understock'. If it's a stable trend, make it 'Optimal'.
 - A lastUpdated string, which should be 'Just now'.
-- A valid placeholder image URL from 'https://placehold.co/64x64/...' with a unique color scheme for each product. The imageUrl must be a complete and valid URL.
+- A valid placeholder image URL. IMPORTANT: This URL must be a complete and valid URL from 'https://placehold.co' with a size of 64x64 and a unique color for each product. For example: 'https://placehold.co/64x64/22c55e/ffffff.png'.
 
 Return the list of 5 products in the specified JSON format. Ensure the data is diverse and reflects current consumer interests.`,
 });
