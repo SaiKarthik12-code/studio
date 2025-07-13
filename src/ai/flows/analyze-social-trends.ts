@@ -31,7 +31,7 @@ const fetchInstagramData = async (productName: string) => {
     const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
     if (!accessToken) {
         console.warn("INSTAGRAM_ACCESS_TOKEN not found. Returning mock data. Please add it to your .env file.");
-        return [{ platform: 'Instagram' as const, text: `This is a sample post for ${productName}. #sample`, username: 'preview_user', postUrl: '#' }];
+        return [{ platform: 'Instagram' as const, text: `This is a sample post for ${productName}. #sample`, username: 'preview_user', postUrl: 'https://www.instagram.com/p/C_2Z8Z_y_4b/' }];
     }
     
     const sanitizedProductName = productName.replace(/\s+/g, '').toLowerCase();
@@ -60,7 +60,7 @@ const fetchInstagramData = async (productName: string) => {
             platform: 'Instagram' as const,
             text: post.caption || '',
             username: 'instagram_user',
-            postUrl: post.permalink || '#',
+            postUrl: post.permalink || `https://www.instagram.com/p/${post.id}/`,
         }));
     } catch (error) {
         console.error('Error fetching Instagram data:', error);
@@ -72,7 +72,7 @@ const fetchTwitterData = async (productName: string) => {
     const bearerToken = process.env.X_BEARER_TOKEN;
     if (!bearerToken) {
         console.warn("X_BEARER_TOKEN not found. Returning mock data.");
-        return [{ platform: 'Twitter' as const, text: `Mock tweet about ${productName}! #mock`, username: 'mock_user', postUrl: '#' }];
+        return [{ platform: 'Twitter' as const, text: `Mock tweet about ${productName}! #mock`, username: 'mock_user', postUrl: 'https://twitter.com/Interior/status/1788574945131046400' }];
     }
     
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(productName)}&tweet.fields=text,author_id,id&expansions=author_id&max_results=10`;
@@ -115,7 +115,7 @@ const fetchRedditData = async (productName: string) => {
             platform: 'Reddit' as const,
             text: post.data.title || '',
             username: post.data.author || 'reddit_user',
-            postUrl: `https://www.reddit.com${post.data.permalink}` || '#',
+            postUrl: `https://www.reddit.com${post.data.permalink || ''}`,
         }));
     } catch (error) {
         console.error('Error fetching Reddit data:', error);
@@ -126,7 +126,7 @@ const fetchRedditData = async (productName: string) => {
 const fetchTikTokData = async (productName: string) => {
     console.warn("TikTok API is not implemented. Returning mock data.");
     return [
-        { platform: 'TikTok' as const, text: `Check out this amazing ${productName}! So cool! #fyp`, username: 'tiktok_trendsetter', postUrl: '#' },
+        { platform: 'TikTok' as const, text: `Check out this amazing ${productName}! So cool! #fyp`, username: 'tiktok_trendsetter', postUrl: 'https://www.tiktok.com/@caseyrosenberg/video/7335122177439976747' },
     ];
 };
 

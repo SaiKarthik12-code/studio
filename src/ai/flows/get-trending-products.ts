@@ -108,7 +108,7 @@ const fetchRedditData = async (query: string) => {
             platform: 'Reddit' as const,
             text: post.data.title || '',
             username: post.data.author || 'reddit_user',
-            postUrl: `https://www.reddit.com${post.data.permalink}` || 'https://www.reddit.com',
+            postUrl: `https://www.reddit.com${post.data.permalink || ''}`,
         }));
     } catch (error) {
         console.error(`Error fetching Reddit data for "${query}":`, error);
@@ -167,7 +167,7 @@ For each of the products you identify, provide the following information:
 - An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
 - A lastUpdated string. Use 'Just now' as you are analyzing live data.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
-- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and the exact postUrl provided in the source data. Do not alter the postUrl.
+- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and the exact postUrl provided in the source data. You MUST NOT alter the postUrl.
 
 Return the list of products in the specified JSON format. You must include reviews for each product.`,
 });
@@ -209,7 +209,7 @@ const trendingProductsFlow = ai.defineFlow(
         const {output} = await prompt({ socialMediaData });
         return output!;
     } catch (error) {
-        console.error("AI call failed. This is likely due to API quota limits. Returning fallback data.", error);
+        console.error("AI call failed. This is likely due to API quota limits or another error. Returning fallback data.", error);
         return getFallbackProducts();
     }
   }
@@ -228,7 +228,7 @@ function getFallbackProducts(): TrendingProductsOutput {
         imageUrl: 'https://placehold.co/64x64',
         reviews: [
           { platform: 'Instagram', text: 'Just got this smart water bottle and it is a game changer for my hydration goals! #smartbottle #healthyliving', username: 'health_guru_123', postUrl: 'https://www.instagram.com/p/C_2Z8Z_y_4b/' },
-          { platform: 'TikTok', text: 'This bottle literally nags me to drink water. 10/10 would recommend. #techtok #hydration', username: 'gadgetgirl', postUrl: 'https://www.tiktok.com/@waterh/video/728634830188 WaterH' }
+          { platform: 'TikTok', text: 'This bottle literally nags me to drink water. 10/10 would recommend. #techtok #hydration', username: 'gadgetgirl', postUrl: 'https://www.tiktok.com/@waterh/video/728634830188' }
         ],
       },
       {
