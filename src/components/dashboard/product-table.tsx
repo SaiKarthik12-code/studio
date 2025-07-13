@@ -230,17 +230,25 @@ export function ProductTable({ products }: { products: Product[] }) {
                         {selectedProduct.reviews && selectedProduct.reviews.length > 0 ? (
                            <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
                                 {selectedProduct.reviews.map((review, index) => (
-                                    <Card key={index} className="bg-secondary/30">
-                                        <CardContent className="p-3">
-                                            <div className="flex items-start gap-3">
-                                                <span className="mt-1">{platformIcons[review.platform]}</span>
-                                                <div className="flex-1">
-                                                    <p className="text-sm text-foreground">{review.text}</p>
-                                                    <p className="text-xs text-muted-foreground mt-1">@{review.username}</p>
+                                    <a
+                                        key={index}
+                                        href={review.postUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block transition-all hover:bg-secondary/50 rounded-lg"
+                                    >
+                                        <Card className="bg-secondary/30 hover:border-primary/50">
+                                            <CardContent className="p-3">
+                                                <div className="flex items-start gap-3">
+                                                    <span className="mt-1">{platformIcons[review.platform]}</span>
+                                                    <div className="flex-1">
+                                                        <p className="text-sm text-foreground">{review.text}</p>
+                                                        <p className="text-xs text-muted-foreground mt-1">@{review.username}</p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </CardContent>
-                                    </Card>
+                                            </CardContent>
+                                        </Card>
+                                    </a>
                                 ))}
                             </div>
                         ) : (

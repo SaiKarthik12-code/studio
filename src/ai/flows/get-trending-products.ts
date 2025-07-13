@@ -45,7 +45,8 @@ const fetchTwitterData = async (query: string) => {
         const posts = data.data?.map((t: any) => ({
             platform: 'X',
             text: t.text,
-            username: users[t.author_id] || 'Unknown'
+            username: users[t.author_id] || 'Unknown',
+            postUrl: `https://twitter.com/${users[t.author_id] || 'anyuser'}/status/${t.id}`
         })) || [];
 
         console.log(`Fetched ${posts.length} posts from Twitter for "${query}".`);
@@ -68,7 +69,8 @@ const fetchRedditData = async (query: string) => {
         const posts = data.data?.children?.map((post: any) => ({
             platform: 'Reddit',
             text: post.data.title,
-            username: post.data.author
+            username: post.data.author,
+            postUrl: `https://www.reddit.com${post.data.permalink}`
         })) || [];
         console.log(`Fetched ${posts.length} posts from Reddit for "${query}".`);
         return posts;
@@ -81,7 +83,8 @@ const fetchRedditData = async (query: string) => {
 const ProductReviewSchema = z.object({
     platform: z.enum(['X', 'Reddit']),
     text: z.string().describe("The full text of the social media post."),
-    username: z.string().describe("The username of the author of the post.")
+    username: z.string().describe("The username of the author of the post."),
+    postUrl: z.string().url().describe("The direct URL to the social media post."),
 });
 
 const TrendingProductSchema = z.object({
@@ -127,7 +130,7 @@ For each of the 10 products you identify, provide the following information:
 - An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
 - A lastUpdated string, which should be 'Just now'.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
-- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending.
+- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and postUrl.
 
 Return the list of 10 products in the specified JSON format. Ensure the data reflects a diverse range of categories and consumer interests based on the tool's output.`,
 });

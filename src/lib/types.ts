@@ -10,5 +10,6 @@ export interface Product {
     platform: 'X' | 'Reddit';
     text: string;
     username: string;
+    postUrl: string;
   }[];
 }
