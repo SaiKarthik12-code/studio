@@ -29,7 +29,7 @@ const fetchTwitterData = async (query: string) => {
       console.log("X_BEARER_TOKEN not found, returning empty array for Twitter.");
       return [];
     }
-    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=20`;
+    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=10&expansions=author_id`;
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
         if (!response.ok) {
@@ -37,7 +37,17 @@ const fetchTwitterData = async (query: string) => {
            return [];
         }
         const data: any = await response.json();
-        const posts = data.data?.map((t: any) => t.text) || [];
+        const users = data.includes?.users?.reduce((acc: any, user: any) => {
+            acc[user.id] = user.username;
+            return acc;
+        }, {}) || {};
+        
+        const posts = data.data?.map((t: any) => ({
+            platform: 'X',
+            text: t.text,
+            username: users[t.author_id] || 'Unknown'
+        })) || [];
+
         console.log(`Fetched ${posts.length} posts from Twitter for "${query}".`);
         return posts;
     } catch (e) {
@@ -47,7 +57,7 @@ const fetchTwitterData = async (query: string) => {
 };
 
 const fetchRedditData = async (query: string) => {
-    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=20`;
+    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=10`;
     try {
         const response = await fetch(url);
         if (!response.ok) {
@@ -55,7 +65,11 @@ const fetchRedditData = async (query: string) => {
            return [];
         }
         const data: any = await response.json();
-        const posts = data.data?.children?.map((post: any) => post.data.title) || [];
+        const posts = data.data?.children?.map((post: any) => ({
+            platform: 'Reddit',
+            text: post.data.title,
+            username: post.data.author
+        })) || [];
         console.log(`Fetched ${posts.length} posts from Reddit for "${query}".`);
         return posts;
     } catch (e) {
@@ -64,6 +78,11 @@ const fetchRedditData = async (query: string) => {
     }
 };
 
+const ProductReviewSchema = z.object({
+    platform: z.enum(['X', 'Reddit']),
+    text: z.string().describe("The full text of the social media post."),
+    username: z.string().describe("The username of the author of the post.")
+});
 
 const TrendingProductSchema = z.object({
   id: z.string().describe("A unique product ID, e.g., 'prod-001'"),
@@ -73,6 +92,7 @@ const TrendingProductSchema = z.object({
   inventoryStatus: z.enum(['Optimal', 'Overstock', 'Understock']).describe('The current inventory status based on the trend.'),
   lastUpdated: z.string().describe("A human-readable string indicating when this data was generated, e.g., 'Just now'."),
   imageUrl: z.string().describe('A placeholder image URL for the product.'),
+  reviews: z.array(ProductReviewSchema).optional().describe("A list of 2-3 of the most representative social media posts that signal this trend.")
 });
 
 const TrendingProductsOutputSchema = z.object({
@@ -92,7 +112,7 @@ const prompt = ai.definePrompt({
   output: {schema: TrendingProductsOutputSchema},
   prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze social media data to identify viral product trends.
 
-You have been provided with a summary of social media mentions and sentiment for several product-related topics.
+You have been provided with a raw data stream of social media posts.
 
 Social Media Data:
 {{{socialMediaData}}}
@@ -107,6 +127,7 @@ For each of the 10 products you identify, provide the following information:
 - An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
 - A lastUpdated string, which should be 'Just now'.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
+- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending.
 
 Return the list of 10 products in the specified JSON format. Ensure the data reflects a diverse range of categories and consumer interests based on the tool's output.`,
 });
@@ -118,40 +139,22 @@ const trendingProductsFlow = ai.defineFlow(
   },
   async () => {
     const topics = ['air fryer', 'skincare', 'running shoes', 'summer dress', 'gaming keyboard', 'protein powder', 'yoga mat', 'noise cancelling headphones', 'weighted blanket', 'electric scooter'];
-    let analysisResults = [];
+    let allPosts: any[] = [];
 
     for (const topic of topics) {
         const twitterPosts = await fetchTwitterData(topic);
         const redditPosts = await fetchRedditData(topic);
-        
-        const allPosts = [...twitterPosts, ...redditPosts];
-        if (allPosts.length === 0) continue;
-
-        let positive = 0;
-        let negative = 0;
-        let neutral = 0;
-
-        for (const post of allPosts) {
-            const sentiment = analyzeSentiment(post);
-            if (sentiment === 'positive') positive++;
-            else if (sentiment === 'negative') negative++;
-            else neutral++;
-        }
-        
-        const overallSentiment = positive > negative ? 'positive' : negative > positive ? 'negative' : 'neutral';
-
-        analysisResults.push({
-            topic: topic,
-            mentions: allPosts.length,
-            sentiment: overallSentiment
-        });
+        allPosts = [...allPosts, ...twitterPosts, ...redditPosts];
     }
+    
+    // Deduplicate posts to avoid sending too much redundant data to the model
+    const uniquePosts = Array.from(new Map(allPosts.map(p => [p.text, p])).values());
 
-    const socialMediaData = JSON.stringify(analysisResults, null, 2);
+    const socialMediaData = JSON.stringify(uniquePosts, null, 2);
+    
     console.log("-----BEGIN SOCIAL MEDIA ANALYSIS-----");
-    console.log(socialMediaData);
+    console.log(`Sending ${uniquePosts.length} unique posts to the AI model.`);
     console.log("-----END SOCIAL MEDIA ANALYSIS-----");
-
 
     const {output} = await prompt({ socialMediaData });
     return output!;

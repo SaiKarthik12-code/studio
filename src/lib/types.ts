@@ -6,4 +6,9 @@ export interface Product {
   inventoryStatus: 'Optimal' | 'Overstock' | 'Understock';
   lastUpdated: string;
   imageUrl: string;
+  reviews?: {
+    platform: 'X' | 'Reddit';
+    text: string;
+    username: string;
+  }[];
 }

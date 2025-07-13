@@ -2,7 +2,7 @@
 'use client';
 
 import Image from 'next/image';
-import { MoreHorizontal, Loader2, Zap } from 'lucide-react';
+import { MoreHorizontal, Loader2, Zap, MessageSquare, Twitter, Bot } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,6 +32,24 @@ import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
 import { Separator } from '../ui/separator';
+
+function RedditIcon(props: React.SVGProps<SVGSVGElement>) {
+    return (
+        <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="currentColor"
+        {...props}
+        >
+        <path d="M12.12,2.48a2.53,2.53,0,0,0-1.28.39,11.33,11.33,0,0,0-3,1.48,21.52,21.52,0,0,0-4.43,5,2.49,2.49,0,0,0,.1,2.83,6.59,6.59,0,0,0,2.94,2.48c.15.06,1,.4,2.43.13a.14.14,0,0,0,.1-.13,1.26,1.26,0,0,0,0-.42c0-.2-.11-.42-.11-.63s0-.41.05-.62a1.3,1.3,0,0,1,.4-.71,3.46,3.46,0,0,1,2.15-.88,3.29,3.29,0,0,1,2.1.8,1.26,1.26,0,0,1,.45.75c0,.2,0,.41.05.62s-.1.42-.1.63a1.26,1.26,0,0,0,0,.42.14.14,0,0,0,.1.13c1.44.27,2.28-.07,2.43-.13a6.59,6.59,0,0,0,2.94-2.48,2.49,2.49,0,0,0,.1-2.83A21.52,21.52,0,0,0,16.27,4.35a11.33,11.33,0,0,0-3-1.48,2.53,2.53,0,0,0-1.12-.42Zm-5,10.63a1.44,1.44,0,1,1,1.44,1.44A1.44,1.44,0,0,1,7.08,13.11Zm7,0a1.44,1.44,0,1,1,1.44,1.44A1.44,1.44,0,0,1,14.05,13.11Zm3.19,3.52c-.22.22-.44.45-.66.66a1.69,1.69,0,0,1-2.38,0,1,1,0,0,0-1.37,0,3.58,3.58,0,0,1-5.06,0,1,1,0,0,0-1.37,0,1.69,1.69,0,0,1-2.38,0c-.22-.21-.44-.44-.66-.66a.75.75,0,0,1,1-1.1l.66.66a.2.2,0,0,0,.28,0c.1-.1.21-.21.31-.31a2.53,2.53,0,0,0,1.38,1.21,4.7,4.7,0,0,0,5.92,0,2.53,2.53,0,0,0,1.38-1.21c.1.1.21.21.31.31a.2.2,0,0,0,.28,0l.66-.66a.75.75,0,0,1,1,1.1Z" />
+        </svg>
+    );
+}
+
+const platformIcons = {
+    X: <Twitter className="h-4 w-4 text-[#1DA1F2]" />,
+    Reddit: <RedditIcon className="h-4 w-4 text-[#FF4500]" />,
+}
 
 export function ProductTable({ products }: { products: Product[] }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -164,88 +182,72 @@ export function ProductTable({ products }: { products: Product[] }) {
 
     {selectedProduct && (
         <Dialog open={!!selectedProduct} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
-            <DialogContent className="max-w-lg">
+            <DialogContent className="max-w-2xl">
                 <DialogHeader>
                     <DialogTitle>{selectedProduct.name}</DialogTitle>
                     <DialogDescription>
                         Product ID: {selectedProduct.id}
                     </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                    <div className="flex justify-center">
-                        <Image
-                            src={selectedProduct.imageUrl}
-                            alt={selectedProduct.name}
-                            width={128}
-                            height={128}
-                            className="rounded-lg border"
-                            data-ai-hint={selectedProduct.name.toLowerCase().split(' ').slice(0, 2).join(' ')}
-                        />
-                    </div>
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-                        <div className="font-semibold">Category</div>
-                        <div>{selectedProduct.category}</div>
-                        
-                        <div className="font-semibold">Inventory Status</div>
-                        <div>
-                             <Badge
-                                variant="outline"
-                                className={getStatusBadgeClass(selectedProduct.inventoryStatus)}
-                            >
-                                {selectedProduct.inventoryStatus}
-                            </Badge>
+                <div className="grid gap-6 py-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="flex justify-center items-center">
+                            <Image
+                                src={selectedProduct.imageUrl}
+                                alt={selectedProduct.name}
+                                width={128}
+                                height={128}
+                                className="rounded-lg border"
+                                data-ai-hint={selectedProduct.name.toLowerCase().split(' ').slice(0, 2).join(' ')}
+                            />
                         </div>
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                            <div className="font-semibold text-muted-foreground">Category</div>
+                            <div>{selectedProduct.category}</div>
+                            
+                            <div className="font-semibold text-muted-foreground">Inventory Status</div>
+                            <div>
+                                <Badge
+                                    variant="outline"
+                                    className={getStatusBadgeClass(selectedProduct.inventoryStatus)}
+                                >
+                                    {selectedProduct.inventoryStatus}
+                                </Badge>
+                            </div>
 
-                        <div className="font-semibold">Forecasted Demand</div>
-                        <div>{selectedProduct.forecastedDemand.toLocaleString()} units</div>
+                            <div className="font-semibold text-muted-foreground">Forecasted Demand</div>
+                            <div>{selectedProduct.forecastedDemand.toLocaleString()} units</div>
 
-                        <div className="font-semibold">Last Updated</div>
-                        <div>{selectedProduct.lastUpdated}</div>
+                            <div className="font-semibold text-muted-foreground">Last Updated</div>
+                            <div>{selectedProduct.lastUpdated}</div>
+                        </div>
                     </div>
 
-                    <Separator className="my-2" />
+                    <Separator />
                     
                     <div className="space-y-4">
-                      <Button onClick={() => handleAnalyzeTrends(selectedProduct.name)} disabled={isAnalyzing} className="w-full">
-                        {isAnalyzing ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Zap className="mr-2 h-4 w-4" />
-                        )}
-                        Analyze Live Trends
-                      </Button>
-
-                      {isAnalyzing && (
-                        <div className="text-center text-sm text-muted-foreground">
-                          AI is analyzing social signals...
-                        </div>
-                      )}
-
-                      {analysisError && <div className="text-sm text-destructive text-center">{analysisError}</div>}
-
-                      {analysisResult && (
-                        <div className="space-y-4 rounded-lg border bg-secondary/50 p-4">
-                          <h4 className="font-semibold text-center">Live Trend Analysis</h4>
-                          <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div>
-                              <div className="font-medium">Overall Sentiment</div>
-                              <div className="text-lg font-bold capitalize">{analysisResult.overallSentiment}</div>
-                            </div>
-                            <div>
-                              <div className="font-medium">Mention Volume</div>
-                              <div className="text-lg font-bold">{analysisResult.volume.toLocaleString()}</div>
-                            </div>
-                            <div className="col-span-2">
-                              <div className="font-medium">Trending Topics</div>
-                              <div className="flex flex-wrap gap-1 mt-1">
-                                {analysisResult.trendingTopics.map((topic, i) => (
-                                    <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-secondary text-secondary-foreground">{topic}</span>
+                        <h4 className="font-semibold text-lg">Real-Time Social Signals</h4>
+                        {selectedProduct.reviews && selectedProduct.reviews.length > 0 ? (
+                           <div className="space-y-4 max-h-64 overflow-y-auto pr-2">
+                                {selectedProduct.reviews.map((review, index) => (
+                                    <Card key={index} className="bg-secondary/30">
+                                        <CardContent className="p-3">
+                                            <div className="flex items-start gap-3">
+                                                <span className="mt-1">{platformIcons[review.platform]}</span>
+                                                <div className="flex-1">
+                                                    <p className="text-sm text-foreground">{review.text}</p>
+                                                    <p className="text-xs text-muted-foreground mt-1">@{review.username}</p>
+                                                </div>
+                                            </div>
+                                        </CardContent>
+                                    </Card>
                                 ))}
-                              </div>
                             </div>
-                          </div>
-                        </div>
-                      )}
+                        ) : (
+                            <div className="text-sm text-muted-foreground text-center py-4">
+                                No specific reviews were highlighted for this trend by the AI.
+                            </div>
+                        )}
                     </div>
                 </div>
             </DialogContent>
