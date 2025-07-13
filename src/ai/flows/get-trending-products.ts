@@ -31,7 +31,8 @@ const fetchTwitterData = async (query: string) => {
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
         if (!response.ok) {
-           console.error(`Twitter API error for query "${query}": ${response.status} ${response.statusText}`);
+           const errorBody = await response.text();
+           console.error(`Twitter API error for query "${query}": ${response.status} ${response.statusText}`, errorBody);
            return [];
         }
         const data: any = await response.json();

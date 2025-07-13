@@ -45,7 +45,8 @@ const fetchTwitterData = async (productName: string) => {
             headers: { 'Authorization': `Bearer ${X_BEARER_TOKEN}` }
         });
         if (!response.ok) {
-            console.error(`Twitter API error: ${response.status} ${response.statusText}`);
+            const errorBody = await response.text();
+            console.error(`Twitter API error: ${response.status} ${response.statusText}`, errorBody);
             return [];
         }
         const data: any = await response.json();
