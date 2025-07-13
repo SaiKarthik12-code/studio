@@ -55,6 +55,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
 
 const prompt = ai.definePrompt({
   name: 'getTrendingProductsPrompt',
+  model: 'googleai/gemini-1.5-flash-latest',
   output: {schema: TrendingProductsOutputSchema},
   tools: [getSocialMediaMentions],
   prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze social media data to identify viral product trends.
