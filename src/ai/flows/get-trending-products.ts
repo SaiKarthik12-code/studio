@@ -1,7 +1,7 @@
 // src/ai/flows/get-trending-products.ts
 'use server';
 /**
- * @fileOverview Generates a list of currently trending products by fetching and analyzing live social media data.
+ * @fileOverview Generates a list of currently trending products by analyzing simulated Instagram data.
  *
  * - getTrendingProducts - A function that generates a list of trending products.
  * - TrendingProductsOutput - The return type for the getTrendingProducts function.
@@ -10,74 +10,31 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { Product } from '@/lib/types';
-import fetch from 'node-fetch';
 
 const ProductReviewSchema = z.object({
-    platform: z.enum(['X', 'Reddit']),
+    platform: z.literal('Instagram'),
     text: z.string().describe("The full text of the social media post."),
     username: z.string().describe("The username of the author of the post."),
     postUrl: z.string().describe("The direct URL to the social media post."),
 });
 
-// Data fetching functions
-const fetchTwitterData = async (query: string) => {
-    const token = process.env.X_BEARER_TOKEN;
-    if (!token || token === 'YOUR_X_BEARER_TOKEN_HERE') {
-        console.warn("X_BEARER_TOKEN not found or is a placeholder in .env file. Twitter fetch will be skipped.");
-        return [];
-    }
+// Data fetching function (Simulated)
+const fetchInstagramData = async (query: string) => {
+    console.log(`Simulating Instagram API call for query "${query}"...`);
+    // REAL IMPLEMENTATION would use the Instagram Graph API.
+    const mockPosts = {
+        'air fryer': [{ text: `Love my new air fryer! So crispy! #airfryer #kitchengadgets`, username: 'foodie123', postUrl: '#' }],
+        'skincare': [{ text: `This new serum is a game changer for my skin #skincare #glowup`, username: 'beauty_guru', postUrl: '#' }],
+        'running shoes': [{ text: `Crushed my morning run in these new kicks! #run #fitness`, username: 'runner_dave', postUrl: '#' }],
+    };
+    const posts = mockPosts[query as keyof typeof mockPosts] || [];
     
-    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=10&expansions=author_id`;
-    try {
-        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
-        if (!response.ok) {
-           const errorBody = await response.text();
-           console.error(`Twitter API error for query "${query}": ${response.status} ${response.statusText}`, errorBody);
-           return [];
-        }
-        const data: any = await response.json();
-        const users = data.includes?.users?.reduce((acc: any, user: any) => {
-            acc[user.id] = user.username;
-            return acc;
-        }, {}) || {};
-        
-        const posts = data.data?.map((t: any) => ({
-            platform: 'X' as const,
-            text: t.text,
-            username: users[t.author_id] || 'UnknownUser',
-            postUrl: `https://twitter.com/${users[t.author_id] || 'anyuser'}/status/${t.id}`
-        })) || [];
-
-        console.log(`Fetched ${posts.length} posts from Twitter for "${query}".`);
-        return posts;
-    } catch (e) {
-        console.error(`Failed to fetch from Twitter for query "${query}":`, e);
-        return [];
-    }
+    return posts.map(p => ({
+        platform: 'Instagram' as const,
+        ...p
+    }));
 };
 
-const fetchRedditData = async (query: string) => {
-    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=10`;
-    try {
-        const response = await fetch(url);
-        if (!response.ok) {
-           console.error(`Reddit API error for query "${query}": ${response.statusText}`);
-           return [];
-        }
-        const data: any = await response.json();
-        const posts = data.data?.children?.map((post: any) => ({
-            platform: 'Reddit' as const,
-            text: post.data.title,
-            username: post.data.author,
-            postUrl: `https://www.reddit.com${post.data.permalink}`
-        })) || [];
-        console.log(`Fetched ${posts.length} posts from Reddit for "${query}".`);
-        return posts;
-    } catch (e) {
-        console.error(`Failed to fetch from Reddit for query "${query}":`, e);
-        return [];
-    }
-};
 
 const TrendingProductSchema = z.object({
   id: z.string().describe("A unique product ID, e.g., 'prod-001'"),
@@ -105,14 +62,16 @@ const prompt = ai.definePrompt({
   name: 'getTrendingProductsPrompt',
   model: 'googleai/gemini-1.5-flash-latest',
   output: {schema: TrendingProductsOutputSchema},
-  prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze social media data to identify viral product trends.
+  prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze Instagram data to identify viral product trends.
 
-You have been provided with a raw data stream of social media posts.
+You have been provided with a raw data stream of Instagram posts.
 
-Social Media Data:
+Instagram Data:
 {{{socialMediaData}}}
 
 Based on this live data, analyze it to identify up to 10 of the most relevant and impactful product trends for Walmart. A higher mention count with positive sentiment should result in higher demand and an 'Understock' status.
+
+If the social media data is empty, generate a plausible list of 5-7 trending products across different categories like Electronics, Home Goods, and Apparel, based on your general knowledge of current consumer trends. In this case, set the 'lastUpdated' field to 'Generated by AI'.
 
 For each of the products you identify, provide the following information:
 - A unique product ID (e.g., prod-001, prod-002).
@@ -120,11 +79,11 @@ For each of the products you identify, provide the following information:
 - A plausible Walmart category (e.g., Home Goods, Electronics, Apparel, Beauty, Groceries, Toys).
 - A forecasted weekly demand as a number, reflecting its viral velocity.
 - An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
-- A lastUpdated string, which should be 'Just now'.
+- A lastUpdated string. Use 'Just now' for live data, and 'Generated by AI' for fallback data.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
 - A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and the exact postUrl provided in the source data. Do not alter the postUrl.
 
-Return the list of products in the specified JSON format. Ensure the data reflects a diverse range of categories and consumer interests based on the tool's output.`,
+Return the list of products in the specified JSON format. Ensure the data reflects a diverse range of categories and consumer interests.`,
 });
 
 
@@ -138,17 +97,11 @@ const trendingProductsFlow = ai.defineFlow(
     let allPosts: any[] = [];
 
     for (const topic of topics) {
-        const twitterPosts = await fetchTwitterData(topic);
-        const redditPosts = await fetchRedditData(topic);
-        allPosts = [...allPosts, ...twitterPosts, ...redditPosts];
+        const instagramPosts = await fetchInstagramData(topic);
+        allPosts = [...allPosts, ...instagramPosts];
     }
     
     const uniquePosts = Array.from(new Map(allPosts.map(p => [p.text, p])).values());
-
-    if (uniquePosts.length === 0) {
-      console.warn("No social media data fetched. Returning empty product list.");
-      return { products: [] };
-    }
 
     const socialMediaData = JSON.stringify(uniquePosts, null, 2);
     

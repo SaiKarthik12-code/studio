@@ -7,7 +7,7 @@ export interface Product {
   lastUpdated: string;
   imageUrl: string;
   reviews?: {
-    platform: 'X' | 'Reddit';
+    platform: 'Instagram';
     text: string;
     username: string;
     postUrl: string;

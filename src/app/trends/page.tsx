@@ -5,20 +5,9 @@ import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analy
 import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, TrendingUp, ThumbsUp, ThumbsDown, MessageCircle, BarChartBig } from 'lucide-react';
-import { Progress } from '@/components/ui/progress';
-
-const socialPlatforms = [
-  { id: 'TikTok', label: 'TikTok' },
-  { id: 'Instagram', label: 'Instagram' },
-  { id: 'X', label: 'X (Twitter)' },
-  { id: 'Reddit', label: 'Reddit' },
-] as const;
-
-type SocialPlatform = (typeof socialPlatforms)[number]['id'];
+import { Loader2, TrendingUp, ThumbsUp, ThumbsDown, MessageCircle, BarChartBig, Instagram } from 'lucide-react';
 
 function SentimentBar({ positive, negative, neutral }: { positive: number, negative: number, neutral: number}) {
     const total = positive + negative + neutral;
@@ -38,23 +27,14 @@ function SentimentBar({ positive, negative, neutral }: { positive: number, negat
 
 export default function TrendMiningPage() {
   const [productName, setProductName] = useState('Stanley Quencher Tumbler');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(['TikTok', 'Instagram', 'X', 'Reddit']);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeSocialTrendsOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleCheckboxChange = (platform: SocialPlatform) => {
-    setSelectedPlatforms((prev) =>
-      prev.includes(platform)
-        ? prev.filter((p) => p !== platform)
-        : [...prev, platform]
-    );
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!productName || selectedPlatforms.length === 0) {
-      setError('Please enter a product name and select at least one platform.');
+    if (!productName) {
+      setError('Please enter a product name.');
       return;
     }
 
@@ -65,7 +45,6 @@ export default function TrendMiningPage() {
     try {
       const output = await analyzeSocialTrends({
         productName,
-        socialMediaPlatforms: selectedPlatforms,
       });
       setResult(output);
     } catch (err) {
@@ -80,7 +59,7 @@ export default function TrendMiningPage() {
     <div className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-8">
       <PageHeader
         title="Trend Mining"
-        description="Analyze real-time social media trends for any product."
+        description="Analyze social media trends for any product using Instagram."
       />
       <div className="grid gap-8 md:grid-cols-3">
         <div className="md:col-span-1">
@@ -100,20 +79,12 @@ export default function TrendMiningPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>Social Platforms</Label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {socialPlatforms.map((platform) => (
-                      <div key={platform.id} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={platform.id}
-                          checked={selectedPlatforms.includes(platform.id)}
-                          onCheckedChange={() => handleCheckboxChange(platform.id)}
-                        />
-                        <Label htmlFor={platform.id} className="font-normal">
-                          {platform.label}
-                        </Label>
-                      </div>
-                    ))}
+                  <Label>Social Platform</Label>
+                  <div className="flex items-center space-x-2 p-2 rounded-md bg-muted">
+                    <Instagram className="h-5 w-5 text-pink-500" />
+                    <Label htmlFor="instagram" className="font-medium">
+                      Instagram (Simulated)
+                    </Label>
                   </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
@@ -130,7 +101,7 @@ export default function TrendMiningPage() {
               <div className="flex flex-col items-center gap-2 text-center">
                  <Loader2 className="h-12 w-12 animate-spin text-primary" />
                  <h3 className="text-xl font-bold tracking-tight">Analyzing Social Signals...</h3>
-                 <p className="text-sm text-muted-foreground">The AI is scraping data from social media. This may take a moment.</p>
+                 <p className="text-sm text-muted-foreground">The AI is scraping simulated data from Instagram. This may take a moment.</p>
               </div>
             </div>
           )}
@@ -171,12 +142,14 @@ export default function TrendMiningPage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {Object.entries(result.sentimentBreakdown).map(([platform, scores]) => {
-                           if (!selectedPlatforms.includes(platform as SocialPlatform)) return null;
                            const total = scores.positive + scores.negative + scores.neutral;
                            return (
                             <div key={platform} className="">
                                 <div className="flex items-center justify-between mb-1">
-                                    <span className="font-medium text-sm">{platform}</span>
+                                    <span className="font-medium text-sm flex items-center gap-2">
+                                      <Instagram className="h-4 w-4 text-pink-500" />
+                                      {platform}
+                                    </span>
                                     <div className="flex items-center gap-4 text-xs text-muted-foreground">
                                         <span className="flex items-center gap-1 text-green-500"><ThumbsUp className="h-3 w-3" /> {scores.positive}</span>
                                         <span className="flex items-center gap-1 text-red-500"><ThumbsDown className="h-3 w-3" /> {scores.negative}</span>

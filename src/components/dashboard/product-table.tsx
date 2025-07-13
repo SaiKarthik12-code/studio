@@ -2,7 +2,7 @@
 'use client';
 
 import Image from 'next/image';
-import { MoreHorizontal, Loader2, Zap, MessageSquare, Twitter, Bot } from 'lucide-react';
+import { MoreHorizontal, Instagram } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,56 +30,18 @@ import {
 import type { Product } from '@/lib/types';
 import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
+import { AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
 import { Separator } from '../ui/separator';
 
-function RedditIcon(props: React.SVGProps<SVGSVGElement>) {
-    return (
-        <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="currentColor"
-        {...props}
-        >
-        <path d="M12.12,2.48a2.53,2.53,0,0,0-1.28.39,11.33,11.33,0,0,0-3,1.48,21.52,21.52,0,0,0-4.43,5,2.49,2.49,0,0,0,.1,2.83,6.59,6.59,0,0,0,2.94,2.48c.15.06,1,.4,2.43.13a.14.14,0,0,0,.1-.13,1.26,1.26,0,0,0,0-.42c0-.2-.11-.42-.11-.63s0-.41.05-.62a1.3,1.3,0,0,1,.4-.71,3.46,3.46,0,0,1,2.15-.88,3.29,3.29,0,0,1,2.1.8,1.26,1.26,0,0,1,.45.75c0,.2,0,.41.05.62s-.1.42-.1.63a1.26,1.26,0,0,0,0,.42.14.14,0,0,0,.1.13c1.44.27,2.28-.07,2.43-.13a6.59,6.59,0,0,0,2.94-2.48,2.49,2.49,0,0,0,.1-2.83A21.52,21.52,0,0,0,16.27,4.35a11.33,11.33,0,0,0-3-1.48,2.53,2.53,0,0,0-1.12-.42Zm-5,10.63a1.44,1.44,0,1,1,1.44,1.44A1.44,1.44,0,0,1,7.08,13.11Zm7,0a1.44,1.44,0,1,1,1.44,1.44A1.44,1.44,0,0,1,14.05,13.11Zm3.19,3.52c-.22.22-.44.45-.66.66a1.69,1.69,0,0,1-2.38,0,1,1,0,0,0-1.37,0,3.58,3.58,0,0,1-5.06,0,1,1,0,0,0-1.37,0,1.69,1.69,0,0,1-2.38,0c-.22-.21-.44-.44-.66-.66a.75.75,0,0,1,1-1.1l.66.66a.2.2,0,0,0,.28,0c.1-.1.21-.21.31-.31a2.53,2.53,0,0,0,1.38,1.21,4.7,4.7,0,0,0,5.92,0,2.53,2.53,0,0,0,1.38-1.21c.1.1.21.21.31.31a.2.2,0,0,0,.28,0l.66-.66a.75.75,0,0,1,1,1.1Z" />
-        </svg>
-    );
-}
-
 const platformIcons = {
-    X: <Twitter className="h-4 w-4 text-[#1DA1F2]" />,
-    Reddit: <RedditIcon className="h-4 w-4 text-[#FF4500]" />,
+    Instagram: <Instagram className="h-4 w-4 text-[#E1306C]" />,
 }
 
 export function ProductTable({ products }: { products: Product[] }) {
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [analysisResult, setAnalysisResult] = useState<AnalyzeSocialTrendsOutput | null>(null);
-  const [analysisError, setAnalysisError] = useState<string | null>(null);
-
-  const handleAnalyzeTrends = async (productName: string) => {
-    if (!productName) return;
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
-    setAnalysisError(null);
-    try {
-      const result = await analyzeSocialTrends({
-        productName,
-        socialMediaPlatforms: ['TikTok', 'Instagram', 'X'],
-      });
-      setAnalysisResult(result);
-    } catch (error) {
-      setAnalysisError('Failed to analyze trends. Please try again.');
-      console.error(error);
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
+  
   const handleDialogClose = () => {
     setSelectedProduct(null);
-    setAnalysisResult(null);
-    setAnalysisError(null);
   }
 
   const getStatusBadgeClass = (status: Product['inventoryStatus']) => {
