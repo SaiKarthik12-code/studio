@@ -199,7 +199,7 @@ export function ProductTable({ products }: { products: Product[] }) {
                                         rel="noopener noreferrer"
                                         className="block transition-all hover:bg-secondary/50 rounded-lg"
                                     >
-                                        <Card className="bg-secondary/30 hover:border-primary/50">
+                                        <Card className="bg-secondary/30 border-secondary/30 hover:border-primary/50">
                                             <CardContent className="p-3">
                                                 <div className="flex items-start gap-3">
                                                     <span className="mt-1">{platformIcons[review.platform]}</span>
