@@ -60,13 +60,12 @@ const fetchTwitterData = async (productName: string) => {
 /**
  * Fetches data from Reddit.
  */
-const fetchRedditData = async (productName: string, accessToken: string) => {
+const fetchRedditData = async (productName: string) => {
   const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(productName)}&limit=10`;
 
   try {
     const response = await fetch(url, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`, // Include the access token
         'User-Agent': 'YourAppName/1.0' // Replace with your app's user agent
       }
     });

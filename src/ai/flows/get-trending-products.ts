@@ -22,8 +22,8 @@ const ProductReviewSchema = z.object({
 // Data fetching functions
 const fetchTwitterData = async (query: string) => {
     const token = process.env.X_BEARER_TOKEN;
-    if (!token) {
-        console.error("X_BEARER_TOKEN not found in .env file. Twitter fetch will be skipped.");
+    if (!token || token === 'YOUR_X_BEARER_TOKEN_HERE') {
+        console.warn("X_BEARER_TOKEN not found or is a placeholder in .env file. Twitter fetch will be skipped.");
         return [];
     }
     
@@ -146,6 +146,11 @@ const trendingProductsFlow = ai.defineFlow(
     
     // Deduplicate posts to avoid sending too much redundant data to the model
     const uniquePosts = Array.from(new Map(allPosts.map(p => [p.text, p])).values());
+
+    if (uniquePosts.length === 0) {
+        console.log("No social media data fetched. Returning empty product list.");
+        return { products: [] };
+    }
 
     const socialMediaData = JSON.stringify(uniquePosts, null, 2);
     
