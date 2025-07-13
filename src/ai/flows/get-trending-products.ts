@@ -45,7 +45,7 @@ For each product, provide the following information:
 - A forecasted weekly demand as a number.
 - An inventory status ('Understock', 'Optimal', 'Overstock'). If a product is very trendy, it should be 'Understock'. If it's a stable trend, make it 'Optimal'.
 - A lastUpdated string, which should be 'Just now'.
-- A placeholder image URL from 'https://placehold.co/64x64/...' with a unique color scheme for each product.
+- A valid placeholder image URL from 'https://placehold.co/64x64/...' with a unique color scheme for each product. The imageUrl must be a complete and valid URL.
 
 Return the list of 5 products in the specified JSON format. Ensure the data is diverse and reflects current consumer interests.`,
 });
