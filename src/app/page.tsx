@@ -20,16 +20,22 @@ import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 
+const ALL_CATEGORIES = [
+  'Home Goods',
+  'Electronics',
+  'Apparel',
+  'Beauty',
+  'Groceries',
+  'Toys',
+  'Drinkware',
+  'Outdoors',
+];
+
 export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
-
-  const allCategories = useMemo(() => {
-    const categories = new Set(products.map((p) => p.category));
-    return Array.from(categories).sort();
-  }, [products]);
 
   useEffect(() => {
     const getProducts = async () => {
@@ -39,6 +45,8 @@ export default function DashboardPage() {
         setProducts(fetchedProducts);
       } catch (error) {
         console.error('Failed to fetch trending products:', error);
+        // In case of an error, we still want to show an empty table
+        setProducts([]);
       } finally {
         setIsLoading(false);
       }
@@ -100,7 +108,7 @@ export default function DashboardPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>Filter by Category</DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {allCategories.map((category) => (
+              {ALL_CATEGORIES.map((category) => (
                 <DropdownMenuCheckboxItem
                   key={category}
                   checked={categoryFilter.has(category)}
@@ -112,7 +120,7 @@ export default function DashboardPage() {
               ))}
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button size="sm" className="h-8 gap-1" onClick={exportToCSV} disabled={isLoading}>
+          <Button size="sm" className="h-8 gap-1" onClick={exportToCSV} disabled={isLoading || products.length === 0}>
             <File className="h-3.5 w-3.5" />
             <span className="sr-only sm:not-sr-only sm:whitespace-nowrap">
               Export
