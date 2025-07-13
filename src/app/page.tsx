@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -14,10 +15,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { File, ListFilter } from 'lucide-react';
+import { AlertCircle, File, ListFilter } from 'lucide-react';
 import { getTrendingProducts } from '@/ai/flows/get-trending-products';
 import type { Product } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Card, CardHeader, CardContent } from '@/components/ui/card';
 
 const ALL_CATEGORIES = [
@@ -34,18 +36,25 @@ const ALL_CATEGORIES = [
 export default function DashboardPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-
+  const [error, setError] = useState<string | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const getProducts = async () => {
       setIsLoading(true);
+      setError(null);
       try {
         const fetchedProducts = await getTrendingProducts();
         setProducts(fetchedProducts);
-      } catch (error) {
-        console.error('Failed to fetch trending products:', error);
-        // In case of an error, we still want to show an empty table
+      } catch (err: any) {
+        console.error('Failed to fetch trending products:', err);
+        if (err.message && err.message.includes('429 Too Many Requests')) {
+             setError(
+            'API rate limit exceeded. You have made too many requests to the AI model. Please try again later or check your API plan and billing details.'
+          );
+        } else {
+            setError('An unexpected error occurred while fetching trending products.');
+        }
         setProducts([]);
       } finally {
         setIsLoading(false);
@@ -154,6 +163,12 @@ export default function DashboardPage() {
                     </div>
                 </CardContent>
              </Card>
+          ) : error ? (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Error Fetching Trends</AlertTitle>
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
           ) : (
             <ProductTable products={filteredProducts} />
           )}
