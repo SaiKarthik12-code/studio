@@ -1,7 +1,7 @@
 // src/ai/flows/get-trending-products.ts
 'use server';
 /**
- * @fileOverview Generates a list of currently trending products by using a simulated web scraping tool.
+ * @fileOverview Generates a list of currently trending products by fetching and analyzing live social media data.
  *
  * - getTrendingProducts - A function that generates a list of trending products.
  * - TrendingProductsOutput - The return type for the getTrendingProducts function.
@@ -10,23 +10,90 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { Product } from '@/lib/types';
-import { getSocialMediaMentions as getSocialMediaMentionsService } from '@/services/scraping';
+import vader from 'vader-sentiment';
+import fetch from 'node-fetch';
 
+// Helper function for sentiment analysis
+const analyzeSentiment = (text: string): 'positive' | 'neutral' | 'negative' => {
+    if (!text) return 'neutral';
+    const intensity = vader.SentimentIntensityAnalyzer.polarity_scores(text);
+    if (intensity.compound >= 0.05) return 'positive';
+    if (intensity.compound <= -0.05) return 'negative';
+    return 'neutral';
+};
+
+// Data fetching functions (similar to analyze-social-trends flow)
+const fetchTwitterData = async (query: string) => {
+    const token = process.env.X_BEARER_TOKEN;
+    if (!token) return [];
+    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=20`;
+    try {
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
+        if (!response.ok) return [];
+        const data: any = await response.json();
+        return data.data?.map((t: any) => t.text) || [];
+    } catch (e) {
+        return [];
+    }
+};
+
+const fetchRedditData = async (query: string) => {
+    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=20`;
+    try {
+        const response = await fetch(url);
+        if (!response.ok) return [];
+        const data: any = await response.json();
+        return data.data?.children?.map((post: any) => post.data.title) || [];
+    } catch (e) {
+        return [];
+    }
+};
+
+
+const SocialMediaAnalysisToolInputSchema = z.object({
+  topics: z.array(z.string()).describe("A list of product-related topics to search for on social media."),
+});
 
 const getSocialMediaMentions = ai.defineTool(
     {
       name: 'getSocialMediaMentions',
-      description: 'Retrieves a list of products being mentioned on social media, along with their mention counts and sentiment.',
+      description: 'Retrieves mentions and sentiment for a list of topics from various social media platforms.',
+      inputSchema: SocialMediaAnalysisToolInputSchema,
       outputSchema: z.array(z.object({
-          productName: z.string(),
+          topic: z.string(),
           mentions: z.number(),
           sentiment: z.enum(['positive', 'neutral', 'negative']),
       })),
     },
-    async () => {
-      // In a real application, this would involve web scraping or calling live social media APIs.
-      // For this demo, we are calling a mock service.
-      return getSocialMediaMentionsService();
+    async ({ topics }) => {
+        const results = [];
+        for (const topic of topics) {
+            const twitterPosts = await fetchTwitterData(topic);
+            const redditPosts = await fetchRedditData(topic);
+            
+            const allPosts = [...twitterPosts, ...redditPosts];
+            if (allPosts.length === 0) continue;
+
+            let positive = 0;
+            let negative = 0;
+            let neutral = 0;
+
+            for (const post of allPosts) {
+                const sentiment = analyzeSentiment(post);
+                if (sentiment === 'positive') positive++;
+                else if (sentiment === 'negative') negative++;
+                else neutral++;
+            }
+            
+            const overallSentiment = positive > negative ? 'positive' : negative > positive ? 'negative' : 'neutral';
+
+            results.push({
+                topic: topic,
+                mentions: allPosts.length,
+                sentiment: overallSentiment
+            });
+        }
+        return results;
     }
 );
 
@@ -60,15 +127,17 @@ const prompt = ai.definePrompt({
   tools: [getSocialMediaMentions],
   prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze social media data to identify viral product trends.
 
-Use the 'getSocialMediaMentions' tool to fetch the latest data on products trending across social media.
+First, come up with a list of 10-15 plausible product-related topics that might be trending right now (e.g., 'air fryer', 'skincare', 'running shoes', 'summer dress').
 
-Based on the tool's output, analyze the data to identify the top 10 most relevant and impactful product trends for Walmart.
+Then, use the 'getSocialMediaMentions' tool to fetch live data for those topics.
+
+Based on the tool's output, analyze the data to identify the top 10 most relevant and impactful product trends for Walmart. A higher mention count with positive sentiment should result in higher demand and an 'Understock' status.
 
 For each of the 10 products you identify, provide the following information:
 - A unique product ID (e.g., prod-001, prod-002).
 - The specific product name.
 - A plausible Walmart category (e.g., Home Goods, Electronics, Apparel, Beauty, Groceries, Toys).
-- A forecasted weekly demand as a number, reflecting its viral velocity. A higher mention count with positive sentiment should result in higher demand.
+- A forecasted weekly demand as a number, reflecting its viral velocity.
 - An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
 - A lastUpdated string, which should be 'Just now'.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.

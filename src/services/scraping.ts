@@ -1,7 +1,7 @@
 /**
  * @fileOverview This file is no longer used for primary data fetching.
- * The logic has been moved into the `analyze-social-trends` flow to directly
- * use live APIs. This file can be kept for reference or removed.
+ * The logic has been moved into the `get-trending-products` and `analyze-social-trends` flows
+ * to directly use live APIs. This file can be kept for reference or removed.
  */
 
 // This defines the structure of the data our mock scraper will return.
@@ -23,7 +23,7 @@ export async function getSocialMediaMentions(): Promise<SocialMediaMention[]> {
   await new Promise(resolve => setTimeout(resolve, 500)); // Simulate network delay
 
   // This is mock data representing what a real scraper might find.
-  // For the hackathon, you can modify this data to tell a specific story.
+  // This is now only a fallback and not used by the primary dashboard flow.
   const mockData: SocialMediaMention[] = [
     { productName: 'Cosori Air Fryer', mentions: 25000, sentiment: 'positive' },
     { productName: 'Rare Beauty Liquid Blush', mentions: 45000, sentiment: 'positive' },
