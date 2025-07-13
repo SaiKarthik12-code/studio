@@ -1,3 +1,4 @@
+
 'use client';
 
 import Image from 'next/image';
@@ -27,6 +28,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Product } from '@/lib/types';
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 const products: Product[] = [
   {
@@ -77,6 +80,8 @@ const products: Product[] = [
 ];
 
 export function ProductTable() {
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
   const getStatusBadgeClass = (status: Product['inventoryStatus']) => {
     switch (status) {
       case 'Understock':
@@ -91,6 +96,7 @@ export function ProductTable() {
   };
 
   return (
+    <>
     <Card>
       <CardHeader>
         <CardTitle>Products</CardTitle>
@@ -154,7 +160,7 @@ export function ProductTable() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem>View Details</DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => setSelectedProduct(product)}>View Details</DropdownMenuItem>
                       <DropdownMenuItem>Adjust Forecast</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -165,5 +171,51 @@ export function ProductTable() {
         </Table>
       </CardContent>
     </Card>
+
+    {selectedProduct && (
+        <Dialog open={!!selectedProduct} onOpenChange={(isOpen) => !isOpen && setSelectedProduct(null)}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>{selectedProduct.name}</DialogTitle>
+                    <DialogDescription>
+                        Product ID: {selectedProduct.id}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="flex justify-center">
+                        <Image
+                            src={selectedProduct.imageUrl}
+                            alt={selectedProduct.name}
+                            width={128}
+                            height={128}
+                            className="rounded-lg border"
+                            data-ai-hint={`${selectedProduct.category} product`}
+                        />
+                    </div>
+                    <div className="grid grid-cols-2 gap-x-8 gap-y-2">
+                        <div className="font-semibold">Category</div>
+                        <div>{selectedProduct.category}</div>
+                        
+                        <div className="font-semibold">Inventory Status</div>
+                        <div>
+                             <Badge
+                                variant="outline"
+                                className={getStatusBadgeClass(selectedProduct.inventoryStatus)}
+                            >
+                                {selectedProduct.inventoryStatus}
+                            </Badge>
+                        </div>
+
+                        <div className="font-semibold">Forecasted Demand</div>
+                        <div>{selectedProduct.forecastedDemand.toLocaleString()} units</div>
+
+                        <div className="font-semibold">Last Updated</div>
+                        <div>{selectedProduct.lastUpdated}</div>
+                    </div>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )}
+    </>
   );
 }
