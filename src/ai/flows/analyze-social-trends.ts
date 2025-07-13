@@ -104,6 +104,10 @@ const fetchRedditData = async (productName: string) => {
     const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(productName)}&limit=10&sort=hot`;
     try {
         const response = await fetch(url, { headers: { 'User-Agent': 'node:firebase-studio-app:v1.0' } });
+        if (!response.ok) {
+            console.error('Failed to fetch Reddit data:', response.statusText);
+            return [];
+        }
         const data: any = await response.json();
         if (!data.data || !data.data.children) return [];
         

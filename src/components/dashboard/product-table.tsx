@@ -224,8 +224,8 @@ export function ProductTable({ products }: { products: Product[] }) {
                                 ))}
                             </div>
                         ) : (
-                            <div className="text-sm text-muted-foreground text-center py-4">
-                                No specific reviews were highlighted for this trend by the AI.
+                            <div className="text-sm text-muted-foreground text-center py-4 rounded-lg bg-secondary/50">
+                                No social media signals were found for this product.
                             </div>
                         )}
                     </div>
