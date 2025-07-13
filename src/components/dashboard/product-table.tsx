@@ -28,37 +28,16 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Product } from '@/lib/types';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Skeleton } from '@/components/ui/skeleton';
 import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
 import { Separator } from '../ui/separator';
-import { getTrendingProducts } from '@/ai/flows/get-trending-products';
 
-export function ProductTable() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function ProductTable({ products }: { products: Product[] }) {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [analysisResult, setAnalysisResult] = useState<AnalyzeSocialTrendsOutput | null>(null);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
-
-
-  useEffect(() => {
-    const getProducts = async () => {
-      setIsLoading(true);
-      try {
-        const fetchedProducts = await getTrendingProducts();
-        setProducts(fetchedProducts);
-      } catch (error) {
-        console.error("Failed to fetch trending products:", error);
-        // Optionally, set an error state here to show in the UI
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    getProducts();
-  }, []);
 
   const handleAnalyzeTrends = async (productName: string) => {
     if (!productName) return;
@@ -126,35 +105,18 @@ export function ProductTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <TableRow key={index}>
-                  <TableCell className="hidden sm:table-cell">
-                    <Skeleton className="h-16 w-16 rounded-md" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-6 w-48" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-6 w-24" />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    <Skeleton className="h-6 w-20" />
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                     <Skeleton className="h-6 w-28" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-8 w-8" />
-                  </TableCell>
+            {products.length === 0 ? (
+                <TableRow>
+                    <TableCell colSpan={6} className="h-24 text-center">
+                        No products match the current filter.
+                    </TableCell>
                 </TableRow>
-              ))
             ) : (
               products.map((product) => (
                 <TableRow key={product.id}>
                   <TableCell className="hidden sm:table-cell">
                     <Image
-                      alt="Product image"
+                      alt={product.name}
                       className="aspect-square rounded-md object-cover"
                       height="64"
                       src={product.imageUrl}
