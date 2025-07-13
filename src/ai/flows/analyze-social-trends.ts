@@ -38,11 +38,8 @@ const analyzeText = (text: string): string[] => {
  * to the API endpoints using the provided API keys from the .env file.
  */
 
-const X_API_KEY = process.env.X_API_KEY;
-const REDDIT_APP_ID = process.env.REDDIT_APP_ID;
-const REDDIT_APP_SECRET = process.env.REDDIT_APP_SECRET;
-
 const fetchTwitterData = async (productName: string, timeframe: string) => {
+    const X_API_KEY = process.env.X_API_KEY;
     console.log(`Simulating X API call for "${productName}"...`);
     // REAL IMPLEMENTATION:
     // const response = await fetch(`https://api.twitter.com/2/tweets/search/recent?query=${productName}`, {
@@ -54,6 +51,8 @@ const fetchTwitterData = async (productName: string, timeframe: string) => {
 };
 
 const fetchRedditData = async (productName: string, timeframe: string) => {
+    const REDDIT_APP_ID = process.env.REDDIT_APP_ID;
+    const REDDIT_APP_SECRET = process.env.REDDIT_APP_SECRET;
     console.log(`Simulating Reddit API call for "${productName}"...`);
     // REAL IMPLEMENTATION:
     // This would involve a more complex OAuth flow to get a token first.
