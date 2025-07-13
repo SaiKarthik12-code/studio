@@ -39,7 +39,7 @@ const products: Product[] = [
     forecastedDemand: 1200,
     inventoryStatus: 'Understock',
     lastUpdated: '2 hours ago',
-    imageUrl: 'https://placehold.co/64x64.png',
+    imageUrl: 'https://placehold.co/64x64/1d4ed8/ffffff.png',
   },
   {
     id: 'prod-002',
@@ -48,7 +48,7 @@ const products: Product[] = [
     forecastedDemand: 800,
     inventoryStatus: 'Optimal',
     lastUpdated: '1 day ago',
-    imageUrl: 'https://placehold.co/64x64.png',
+    imageUrl: 'https://placehold.co/64x64/22c55e/ffffff.png',
   },
   {
     id: 'prod-003',
@@ -57,7 +57,7 @@ const products: Product[] = [
     forecastedDemand: 350,
     inventoryStatus: 'Overstock',
     lastUpdated: '5 hours ago',
-    imageUrl: 'https://placehold.co/64x64.png',
+    imageUrl: 'https://placehold.co/64x64/facc15/000000.png',
   },
   {
     id: 'prod-004',
@@ -66,7 +66,7 @@ const products: Product[] = [
     forecastedDemand: 2500,
     inventoryStatus: 'Optimal',
     lastUpdated: '30 minutes ago',
-    imageUrl: 'https://placehold.co/64x64.png',
+    imageUrl: 'https://placehold.co/64x64/f8fafc/000000.png',
   },
   {
     id: 'prod-005',
@@ -75,7 +75,7 @@ const products: Product[] = [
     forecastedDemand: 600,
     inventoryStatus: 'Understock',
     lastUpdated: '8 hours ago',
-    imageUrl: 'https://placehold.co/64x64.png',
+    imageUrl: 'https://placehold.co/64x64/ef4444/ffffff.png',
   },
 ];
 
