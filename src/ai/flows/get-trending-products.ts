@@ -13,6 +13,13 @@ import type { Product } from '@/lib/types';
 import vader from 'vader-sentiment';
 import fetch from 'node-fetch';
 
+const ProductReviewSchema = z.object({
+    platform: z.enum(['X', 'Reddit']),
+    text: z.string().describe("The full text of the social media post."),
+    username: z.string().describe("The username of the author of the post."),
+    postUrl: z.string().describe("The direct URL to the social media post."),
+});
+
 // Helper function for sentiment analysis
 const analyzeSentiment = (text: string): 'positive' | 'neutral' | 'negative' => {
     if (!text) return 'neutral';
@@ -25,9 +32,15 @@ const analyzeSentiment = (text: string): 'positive' | 'neutral' | 'negative' => 
 // Data fetching functions
 const fetchTwitterData = async (query: string) => {
     const token = process.env.X_BEARER_TOKEN;
-    if (!token) {
-      console.log("X_BEARER_TOKEN not found, returning empty array for Twitter.");
-      return [];
+    if (!token || token === "YOUR_X_BEARER_TOKEN") {
+      console.log("X_BEARER_TOKEN not found or is a placeholder. Returning mock data for Twitter.");
+      // Return a single, clear mock data point when the API key is missing
+      return [{
+          platform: 'X',
+          text: `This is a mock tweet for "${query}" because no Twitter API key was provided. Add your key to .env to see real data.`,
+          username: 'TrendSeerBot',
+          postUrl: 'https://twitter.com'
+      }];
     }
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=10&expansions=author_id`;
     try {
@@ -45,7 +58,7 @@ const fetchTwitterData = async (query: string) => {
         const posts = data.data?.map((t: any) => ({
             platform: 'X',
             text: t.text,
-            username: users[t.author_id] || 'Unknown',
+            username: users[t.author_id] || 'UnknownUser',
             postUrl: `https://twitter.com/${users[t.author_id] || 'anyuser'}/status/${t.id}`
         })) || [];
 
@@ -79,13 +92,6 @@ const fetchRedditData = async (query: string) => {
         return [];
     }
 };
-
-const ProductReviewSchema = z.object({
-    platform: z.enum(['X', 'Reddit']),
-    text: z.string().describe("The full text of the social media post."),
-    username: z.string().describe("The username of the author of the post."),
-    postUrl: z.string().describe("The direct URL to the social media post."),
-});
 
 const TrendingProductSchema = z.object({
   id: z.string().describe("A unique product ID, e.g., 'prod-001'"),
