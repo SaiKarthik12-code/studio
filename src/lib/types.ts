@@ -3,7 +3,7 @@ export interface Product {
   name: string;
   category: string;
   forecastedDemand: number;
-  stockoutRisk: 'Low' | 'Medium' | 'High';
+  inventoryStatus: 'Optimal' | 'Overstock' | 'Understock';
   lastUpdated: string;
   imageUrl: string;
 }

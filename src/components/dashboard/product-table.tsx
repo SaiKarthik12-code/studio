@@ -34,7 +34,7 @@ const products: Product[] = [
     name: 'Stanley Quencher Tumbler',
     category: 'Drinkware',
     forecastedDemand: 1200,
-    stockoutRisk: 'High',
+    inventoryStatus: 'Understock',
     lastUpdated: '2 hours ago',
     imageUrl: 'https://placehold.co/64x64.png',
   },
@@ -43,7 +43,7 @@ const products: Product[] = [
     name: 'Organic Avocadoes (4-pack)',
     category: 'Groceries',
     forecastedDemand: 800,
-    stockoutRisk: 'Medium',
+    inventoryStatus: 'Optimal',
     lastUpdated: '1 day ago',
     imageUrl: 'https://placehold.co/64x64.png',
   },
@@ -52,7 +52,7 @@ const products: Product[] = [
     name: 'LEGO Star Wars Set',
     category: 'Toys',
     forecastedDemand: 350,
-    stockoutRisk: 'Low',
+    inventoryStatus: 'Overstock',
     lastUpdated: '5 hours ago',
     imageUrl: 'https://placehold.co/64x64.png',
   },
@@ -61,7 +61,7 @@ const products: Product[] = [
     name: 'Great Value Milk',
     category: 'Groceries',
     forecastedDemand: 2500,
-    stockoutRisk: 'Low',
+    inventoryStatus: 'Optimal',
     lastUpdated: '30 minutes ago',
     imageUrl: 'https://placehold.co/64x64.png',
   },
@@ -70,34 +70,25 @@ const products: Product[] = [
     name: 'Nintendo Switch OLED',
     category: 'Electronics',
     forecastedDemand: 600,
-    stockoutRisk: 'Medium',
+    inventoryStatus: 'Understock',
     lastUpdated: '8 hours ago',
     imageUrl: 'https://placehold.co/64x64.png',
   },
 ];
 
 export function ProductTable() {
-  const getRiskBadgeVariant = (risk: Product['stockoutRisk']) => {
-    switch (risk) {
-      case 'High':
-        return 'destructive';
-      case 'Medium':
-        return 'secondary';
-      case 'Low':
-        return 'default';
+  const getStatusBadgeClass = (status: Product['inventoryStatus']) => {
+    switch (status) {
+      case 'Understock':
+        return 'bg-red-500/20 text-red-700 border-red-500/30 dark:text-red-400';
+      case 'Overstock':
+        return 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30 dark:text-yellow-400';
+      case 'Optimal':
+        return 'bg-green-500/20 text-green-700 border-green-500/30 dark:text-green-400';
       default:
-        return 'outline';
+        return '';
     }
   };
-  
-  const getRiskBadgeClass = (risk: Product['stockoutRisk']) => {
-    switch(risk) {
-      case 'High': return 'bg-red-500/20 text-red-700 border-red-500/30 dark:text-red-400';
-      case 'Medium': return 'bg-yellow-500/20 text-yellow-700 border-yellow-500/30 dark:text-yellow-400';
-      case 'Low': return 'bg-green-500/20 text-green-700 border-green-500/30 dark:text-green-400';
-      default: return '';
-    }
-  }
 
   return (
     <Card>
@@ -115,7 +106,7 @@ export function ProductTable() {
                 <span className="sr-only">Image</span>
               </TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Stockout Risk</TableHead>
+              <TableHead>Inventory Status</TableHead>
               <TableHead className="hidden md:table-cell">
                 Forecasted Demand
               </TableHead>
@@ -140,8 +131,11 @@ export function ProductTable() {
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>
-                  <Badge variant="outline" className={getRiskBadgeClass(product.stockoutRisk)}>
-                    {product.stockoutRisk}
+                  <Badge
+                    variant="outline"
+                    className={getStatusBadgeClass(product.inventoryStatus)}
+                  >
+                    {product.inventoryStatus}
                   </Badge>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">
