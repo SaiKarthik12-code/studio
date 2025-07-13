@@ -84,7 +84,7 @@ const ProductReviewSchema = z.object({
     platform: z.enum(['X', 'Reddit']),
     text: z.string().describe("The full text of the social media post."),
     username: z.string().describe("The username of the author of the post."),
-    postUrl: z.string().url().describe("The direct URL to the social media post."),
+    postUrl: z.string().describe("The direct URL to the social media post."),
 });
 
 const TrendingProductSchema = z.object({
