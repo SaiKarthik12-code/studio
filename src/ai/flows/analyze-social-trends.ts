@@ -37,9 +37,14 @@ const AnalyzeSocialTrendsOutputSchema = z.object({
     .array(z.string())
     .describe('The trending topics related to the product.'),
   volume: z.number().describe('The volume of mentions of the product.'),
-  sentimentBreakdown: z.record(
-    z.string(),
-    z.object({
+  sentimentBreakdown: z
+    .object({
+      TikTok: z.object({
+        positive: z.number(),
+        negative: z.number(),
+        neutral: z.number(),
+      }),
+      Instagram: z.object({
       positive: z.number(),
       negative: z.number(),
       neutral: z.number(),
