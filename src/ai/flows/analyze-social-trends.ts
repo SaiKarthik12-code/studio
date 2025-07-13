@@ -33,9 +33,9 @@ const analyzeText = (text: string): string[] => {
  */
 const fetchTwitterData = async (productName: string) => {
     const X_BEARER_TOKEN = process.env.X_BEARER_TOKEN;
-    if (!X_BEARER_TOKEN || X_BEARER_TOKEN === "YOUR_X_BEARER_TOKEN") {
-        console.log("X_BEARER_TOKEN not found or is a placeholder, returning mock data.");
-        return [{ text: `Just got the ${productName}, it's okay. #review` }];
+    if (!X_BEARER_TOKEN) {
+        console.error("X_BEARER_TOKEN not found in .env file. Twitter fetch will be skipped.");
+        return [];
     }
     
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(productName)}&max_results=10`;
@@ -45,7 +45,7 @@ const fetchTwitterData = async (productName: string) => {
             headers: { 'Authorization': `Bearer ${X_BEARER_TOKEN}` }
         });
         if (!response.ok) {
-            console.error(`Twitter API error: ${response.statusText}`);
+            console.error(`Twitter API error: ${response.status} ${response.statusText}`);
             return [];
         }
         const data: any = await response.json();

@@ -10,7 +10,6 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { Product } from '@/lib/types';
-import vader from 'vader-sentiment';
 import fetch from 'node-fetch';
 
 const ProductReviewSchema = z.object({
@@ -20,33 +19,19 @@ const ProductReviewSchema = z.object({
     postUrl: z.string().describe("The direct URL to the social media post."),
 });
 
-// Helper function for sentiment analysis
-const analyzeSentiment = (text: string): 'positive' | 'neutral' | 'negative' => {
-    if (!text) return 'neutral';
-    const intensity = vader.SentimentIntensityAnalyzer.polarity_scores(text);
-    if (intensity.compound >= 0.05) return 'positive';
-    if (intensity.compound <= -0.05) return 'negative';
-    return 'neutral';
-};
-
 // Data fetching functions
 const fetchTwitterData = async (query: string) => {
     const token = process.env.X_BEARER_TOKEN;
-    if (!token || token === "YOUR_X_BEARER_TOKEN") {
-      console.log("X_BEARER_TOKEN not found or is a placeholder. Returning mock data for Twitter.");
-      // Return a single, clear mock data point when the API key is missing
-      return [{
-          platform: 'X',
-          text: `This is a mock tweet for "${query}" because no Twitter API key was provided. Add your key to .env to see real data.`,
-          username: 'TrendSeerBot',
-          postUrl: 'https://twitter.com'
-      }];
+    if (!token) {
+        console.error("X_BEARER_TOKEN not found in .env file. Twitter fetch will be skipped.");
+        return [];
     }
+    
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=10&expansions=author_id`;
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
         if (!response.ok) {
-           console.error(`Twitter API error for query "${query}": ${response.statusText}`);
+           console.error(`Twitter API error for query "${query}": ${response.status} ${response.statusText}`);
            return [];
         }
         const data: any = await response.json();
@@ -56,7 +41,7 @@ const fetchTwitterData = async (query: string) => {
         }, {}) || {};
         
         const posts = data.data?.map((t: any) => ({
-            platform: 'X',
+            platform: 'X' as const,
             text: t.text,
             username: users[t.author_id] || 'UnknownUser',
             postUrl: `https://twitter.com/${users[t.author_id] || 'anyuser'}/status/${t.id}`
@@ -80,7 +65,7 @@ const fetchRedditData = async (query: string) => {
         }
         const data: any = await response.json();
         const posts = data.data?.children?.map((post: any) => ({
-            platform: 'Reddit',
+            platform: 'Reddit' as const,
             text: post.data.title,
             username: post.data.author,
             postUrl: `https://www.reddit.com${post.data.permalink}`
@@ -137,6 +122,8 @@ For each of the 10 products you identify, provide the following information:
 - A lastUpdated string, which should be 'Just now'.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
 - A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and the exact postUrl provided in the source data. Do not alter the postUrl.
+
+If the provided Social Media Data is empty or sparse, return an empty list of products. Do not invent products.
 
 Return the list of 10 products in the specified JSON format. Ensure the data reflects a diverse range of categories and consumer interests based on the tool's output.`,
 });
