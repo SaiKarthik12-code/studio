@@ -33,7 +33,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Skeleton } from '@/components/ui/skeleton';
 import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
 import { Separator } from '../ui/separator';
-import { fetchProducts } from '@/lib/data';
+import { getTrendingProducts } from '@/ai/flows/get-trending-products';
 
 export function ProductTable() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -48,7 +48,7 @@ export function ProductTable() {
     const getProducts = async () => {
       setIsLoading(true);
       try {
-        const fetchedProducts = await fetchProducts();
+        const fetchedProducts = await getTrendingProducts();
         setProducts(fetchedProducts);
       } catch (error) {
         console.error("Failed to fetch trending products:", error);
@@ -104,7 +104,7 @@ export function ProductTable() {
       <CardHeader>
         <CardTitle>Trending Products</CardTitle>
         <CardDescription>
-          Live product data from our inventory system.
+          AI-generated list of trending products based on market analysis.
         </CardDescription>
       </CardHeader>
       <CardContent>
