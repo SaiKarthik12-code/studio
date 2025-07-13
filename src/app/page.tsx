@@ -48,13 +48,8 @@ export default function DashboardPage() {
         setProducts(fetchedProducts);
       } catch (err: any) {
         console.error('Failed to fetch trending products:', err);
-        if (err.message && err.message.includes('429 Too Many Requests')) {
-             setError(
-            'API rate limit exceeded. You have made too many requests to the AI model. Please try again later or check your API plan and billing details.'
-          );
-        } else {
-            setError('An unexpected error occurred while fetching trending products.');
-        }
+        // The error is now handled in the flow itself, but this catch is kept as a safety net.
+        setError('An unexpected error occurred while fetching trending products.');
         setProducts([]);
       } finally {
         setIsLoading(false);
