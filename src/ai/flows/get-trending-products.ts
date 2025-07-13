@@ -130,7 +130,7 @@ For each of the 10 products you identify, provide the following information:
 - An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
 - A lastUpdated string, which should be 'Just now'.
 - A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
-- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and postUrl.
+- A list of 2-3 of the most representative "reviews" (social media posts) from the provided data that justify why this product is trending. Each review must include the platform, text, username, and the exact postUrl provided in the source data. Do not alter the postUrl.
 
 Return the list of 10 products in the specified JSON format. Ensure the data reflects a diverse range of categories and consumer interests based on the tool's output.`,
 });
