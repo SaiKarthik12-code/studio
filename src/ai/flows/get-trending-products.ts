@@ -22,17 +22,26 @@ const analyzeSentiment = (text: string): 'positive' | 'neutral' | 'negative' => 
     return 'neutral';
 };
 
-// Data fetching functions (similar to analyze-social-trends flow)
+// Data fetching functions
 const fetchTwitterData = async (query: string) => {
     const token = process.env.X_BEARER_TOKEN;
-    if (!token) return [];
+    if (!token) {
+      console.log("X_BEARER_TOKEN not found, returning empty array for Twitter.");
+      return [];
+    }
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&max_results=20`;
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` }});
-        if (!response.ok) return [];
+        if (!response.ok) {
+           console.error(`Twitter API error for query "${query}": ${response.statusText}`);
+           return [];
+        }
         const data: any = await response.json();
-        return data.data?.map((t: any) => t.text) || [];
+        const posts = data.data?.map((t: any) => t.text) || [];
+        console.log(`Fetched ${posts.length} posts from Twitter for "${query}".`);
+        return posts;
     } catch (e) {
+        console.error(`Failed to fetch from Twitter for query "${query}":`, e);
         return [];
     }
 };
@@ -41,61 +50,19 @@ const fetchRedditData = async (query: string) => {
     const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=20`;
     try {
         const response = await fetch(url);
-        if (!response.ok) return [];
+        if (!response.ok) {
+           console.error(`Reddit API error for query "${query}": ${response.statusText}`);
+           return [];
+        }
         const data: any = await response.json();
-        return data.data?.children?.map((post: any) => post.data.title) || [];
+        const posts = data.data?.children?.map((post: any) => post.data.title) || [];
+        console.log(`Fetched ${posts.length} posts from Reddit for "${query}".`);
+        return posts;
     } catch (e) {
+        console.error(`Failed to fetch from Reddit for query "${query}":`, e);
         return [];
     }
 };
-
-
-const SocialMediaAnalysisToolInputSchema = z.object({
-  topics: z.array(z.string()).describe("A list of product-related topics to search for on social media."),
-});
-
-const getSocialMediaMentions = ai.defineTool(
-    {
-      name: 'getSocialMediaMentions',
-      description: 'Retrieves mentions and sentiment for a list of topics from various social media platforms.',
-      inputSchema: SocialMediaAnalysisToolInputSchema,
-      outputSchema: z.array(z.object({
-          topic: z.string(),
-          mentions: z.number(),
-          sentiment: z.enum(['positive', 'neutral', 'negative']),
-      })),
-    },
-    async ({ topics }) => {
-        const results = [];
-        for (const topic of topics) {
-            const twitterPosts = await fetchTwitterData(topic);
-            const redditPosts = await fetchRedditData(topic);
-            
-            const allPosts = [...twitterPosts, ...redditPosts];
-            if (allPosts.length === 0) continue;
-
-            let positive = 0;
-            let negative = 0;
-            let neutral = 0;
-
-            for (const post of allPosts) {
-                const sentiment = analyzeSentiment(post);
-                if (sentiment === 'positive') positive++;
-                else if (sentiment === 'negative') negative++;
-                else neutral++;
-            }
-            
-            const overallSentiment = positive > negative ? 'positive' : negative > positive ? 'negative' : 'neutral';
-
-            results.push({
-                topic: topic,
-                mentions: allPosts.length,
-                sentiment: overallSentiment
-            });
-        }
-        return results;
-    }
-);
 
 
 const TrendingProductSchema = z.object({
@@ -114,7 +81,6 @@ const TrendingProductsOutputSchema = z.object({
 
 export type TrendingProductsOutput = z.infer<typeof TrendingProductsOutputSchema>;
 
-
 export async function getTrendingProducts(): Promise<Product[]> {
     const result = await trendingProductsFlow();
     return result.products as Product[];
@@ -124,14 +90,14 @@ const prompt = ai.definePrompt({
   name: 'getTrendingProductsPrompt',
   model: 'googleai/gemini-1.5-flash-latest',
   output: {schema: TrendingProductsOutputSchema},
-  tools: [getSocialMediaMentions],
   prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze social media data to identify viral product trends.
 
-First, come up with a list of 10-15 plausible product-related topics that might be trending right now (e.g., 'air fryer', 'skincare', 'running shoes', 'summer dress').
+You have been provided with a summary of social media mentions and sentiment for several product-related topics.
 
-Then, use the 'getSocialMediaMentions' tool to fetch live data for those topics.
+Social Media Data:
+{{{socialMediaData}}}
 
-Based on the tool's output, analyze the data to identify the top 10 most relevant and impactful product trends for Walmart. A higher mention count with positive sentiment should result in higher demand and an 'Understock' status.
+Based on this live data, analyze it to identify the top 10 most relevant and impactful product trends for Walmart. A higher mention count with positive sentiment should result in higher demand and an 'Understock' status.
 
 For each of the 10 products you identify, provide the following information:
 - A unique product ID (e.g., prod-001, prod-002).
@@ -151,7 +117,43 @@ const trendingProductsFlow = ai.defineFlow(
     outputSchema: TrendingProductsOutputSchema,
   },
   async () => {
-    const {output} = await prompt();
+    const topics = ['air fryer', 'skincare', 'running shoes', 'summer dress', 'gaming keyboard', 'protein powder', 'yoga mat', 'noise cancelling headphones', 'weighted blanket', 'electric scooter'];
+    let analysisResults = [];
+
+    for (const topic of topics) {
+        const twitterPosts = await fetchTwitterData(topic);
+        const redditPosts = await fetchRedditData(topic);
+        
+        const allPosts = [...twitterPosts, ...redditPosts];
+        if (allPosts.length === 0) continue;
+
+        let positive = 0;
+        let negative = 0;
+        let neutral = 0;
+
+        for (const post of allPosts) {
+            const sentiment = analyzeSentiment(post);
+            if (sentiment === 'positive') positive++;
+            else if (sentiment === 'negative') negative++;
+            else neutral++;
+        }
+        
+        const overallSentiment = positive > negative ? 'positive' : negative > positive ? 'negative' : 'neutral';
+
+        analysisResults.push({
+            topic: topic,
+            mentions: allPosts.length,
+            sentiment: overallSentiment
+        });
+    }
+
+    const socialMediaData = JSON.stringify(analysisResults, null, 2);
+    console.log("-----BEGIN SOCIAL MEDIA ANALYSIS-----");
+    console.log(socialMediaData);
+    console.log("-----END SOCIAL MEDIA ANALYSIS-----");
+
+
+    const {output} = await prompt({ socialMediaData });
     return output!;
   }
 );
