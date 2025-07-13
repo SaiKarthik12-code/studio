@@ -9,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2, TrendingUp, ThumbsUp, ThumbsDown, MessageCircle, BarChartBig } from 'lucide-react';
+import { Progress } from '@/components/ui/progress';
 
 const socialPlatforms = [
   { id: 'TikTok', label: 'TikTok' },
@@ -19,9 +20,25 @@ const socialPlatforms = [
 
 type SocialPlatform = (typeof socialPlatforms)[number]['id'];
 
+function SentimentBar({ positive, negative, neutral }: { positive: number, negative: number, neutral: number}) {
+    const total = positive + negative + neutral;
+    if (total === 0) return <div className="h-2 w-full rounded-full bg-muted" />;
+    
+    const pPositive = (positive / total) * 100;
+    const pNegative = (negative / total) * 100;
+
+    return (
+        <div className="flex w-full h-2 rounded-full overflow-hidden bg-muted">
+            <div className="bg-green-500" style={{ width: `${pPositive}%` }} />
+            <div className="bg-red-500" style={{ width: `${pNegative}%` }} />
+        </div>
+    )
+}
+
+
 export default function TrendMiningPage() {
   const [productName, setProductName] = useState('Stanley Quencher Tumbler');
-  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(['TikTok', 'Instagram']);
+  const [selectedPlatforms, setSelectedPlatforms] = useState<SocialPlatform[]>(['TikTok', 'Instagram', 'X', 'Reddit']);
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<AnalyzeSocialTrendsOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -144,7 +161,7 @@ export default function TrendMiningPage() {
                     </CardHeader>
                     <CardContent className="flex flex-wrap gap-2">
                         {result.trendingTopics.map((topic, i) => (
-                            <span key={i} className="px-3 py-1 text-sm rounded-full bg-secondary text-secondary-foreground">{topic}</span>
+                            <span key={i} className="px-3 py-1 text-sm rounded-full bg-secondary text-secondary-foreground">#{topic}</span>
                         ))}
                     </CardContent>
                 </Card>
@@ -153,16 +170,23 @@ export default function TrendMiningPage() {
                         <CardTitle>Sentiment Breakdown</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {Object.entries(result.sentimentBreakdown).map(([platform, score]) => (
-                            <div key={platform} className="flex items-center justify-between">
-                                <span className="font-medium">{platform}</span>
-                                <div className="flex items-center gap-2">
-                                    <div className="text-sm text-green-500 flex items-center gap-1"><ThumbsUp className="h-4 w-4" /> {Math.round(score * 100)}%</div>
-                                    <div className="text-sm text-red-500 flex items-center gap-1"><ThumbsDown className="h-4 w-4" /> {Math.round((1-score) * 0.2 * 100)}%</div>
-                                    <div className="text-sm text-muted-foreground flex items-center gap-1"><MessageCircle className="h-4 w-4" /> {Math.round((1-score) * 0.8 * 100)}%</div>
+                        {Object.entries(result.sentimentBreakdown).map(([platform, scores]) => {
+                           if (!selectedPlatforms.includes(platform as SocialPlatform)) return null;
+                           const total = scores.positive + scores.negative + scores.neutral;
+                           return (
+                            <div key={platform} className="">
+                                <div className="flex items-center justify-between mb-1">
+                                    <span className="font-medium text-sm">{platform}</span>
+                                    <div className="flex items-center gap-4 text-xs text-muted-foreground">
+                                        <span className="flex items-center gap-1 text-green-500"><ThumbsUp className="h-3 w-3" /> {scores.positive}</span>
+                                        <span className="flex items-center gap-1 text-red-500"><ThumbsDown className="h-3 w-3" /> {scores.negative}</span>
+                                        <span className="flex items-center gap-1"><MessageCircle className="h-3 w-3" /> {scores.neutral}</span>
+                                    </div>
                                 </div>
+                                <SentimentBar {...scores} />
                             </div>
-                        ))}
+                           )
+                        })}
                     </CardContent>
                 </Card>
 
