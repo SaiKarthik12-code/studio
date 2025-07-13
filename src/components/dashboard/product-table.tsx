@@ -32,8 +32,8 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
-import { getTrendingProducts } from '@/ai/flows/get-trending-products';
 import { Separator } from '../ui/separator';
+import { fetchProducts } from '@/lib/data';
 
 export function ProductTable() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -48,7 +48,7 @@ export function ProductTable() {
     const getProducts = async () => {
       setIsLoading(true);
       try {
-        const fetchedProducts = await getTrendingProducts();
+        const fetchedProducts = await fetchProducts();
         setProducts(fetchedProducts);
       } catch (error) {
         console.error("Failed to fetch trending products:", error);
@@ -104,7 +104,7 @@ export function ProductTable() {
       <CardHeader>
         <CardTitle>Trending Products</CardTitle>
         <CardDescription>
-          AI-generated list of currently trending products.
+          Live product data from our inventory system.
         </CardDescription>
       </CardHeader>
       <CardContent>
