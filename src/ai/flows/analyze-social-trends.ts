@@ -3,7 +3,7 @@
 'use server';
 
 /**
- * @fileOverview Analyzes real-time social media trends for specific products by fetching live data from Instagram (simulated).
+ * @fileOverview Analyzes real-time social media trends for specific products by fetching live data from Instagram.
  *
  * - analyzeSocialTrends - Analyzes real-time social media trends for specific products.
  * - AnalyzeSocialTrendsInput - The input type for the analyzeSocialTrends function.
@@ -13,6 +13,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import vader from 'vader-sentiment';
+import fetch from 'node-fetch';
 
 const analyzeSentiment = (text: string): number => {
     if (!text) return 0;
@@ -26,20 +27,57 @@ const analyzeText = (text: string): string[] => {
   return text.toLowerCase().match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
 }
 
-
 /**
- * NOTE FOR HACKATHON:
- * The following function simulates a call to the Instagram API which requires complex authentication.
- * You would replace the mock data with actual API calls in a full implementation.
+ * Fetches recent top media for a given hashtag from the Instagram Graph API.
+ * NOTE: This requires a valid User Access Token with the necessary permissions.
+ * The hashtag must be associated with the user's Instagram Business Account.
+ * A placeholder is returned if the API token is not configured.
  */
 const fetchInstagramData = async (productName: string) => {
-    console.log(`Simulating Instagram API call for "${productName}"...`);
-    // REAL IMPLEMENTATION would use the Instagram Graph API.
-    return [
-        { text: `New ${productName} is amazing! #favorite`, username: 'insta_user1', postUrl: '#' },
-        { text: `Obsessed with the ${productName}`, username: 'style_guru', postUrl: '#' },
-        { text: `Just got the ${productName}, so good! #musthave`, username: 'product_fan', postUrl: '#' },
-    ];
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+    if (!accessToken) {
+        console.warn("INSTAGRAM_ACCESS_TOKEN not found. Returning mock data. Please add it to your .env file.");
+        // Return a single mock item so the app doesn't show an empty state.
+        return [
+            { text: `This is a sample post for ${productName}. Configure the API key to see live data. #sample`, username: 'preview_user', postUrl: '#' },
+        ];
+    }
+    
+    // 1. Get the ID for the hashtag
+    const sanitizedProductName = productName.replace(/\s+/g, '').toLowerCase();
+    const searchUrl = `https://graph.facebook.com/v20.0/ig_hashtag_search?user_id=me&q=${sanitizedProductName}&access_token=${accessToken}`;
+    
+    try {
+        const searchResponse = await fetch(searchUrl);
+        const searchData: any = await searchResponse.json();
+
+        if (!searchResponse.ok || !searchData.data || searchData.data.length === 0) {
+            console.error('Failed to find Instagram hashtag or no data available:', searchData.error?.message || 'No hashtag found.');
+            return [];
+        }
+        
+        const hashtagId = searchData.data[0].id;
+
+        // 2. Get recent top media for that hashtag
+        const mediaUrl = `https://graph.facebook.com/v20.0/${hashtagId}/top_media?user_id=me&fields=id,media_type,caption,permalink&limit=10&access_token=${accessToken}`;
+        const mediaResponse = await fetch(mediaUrl);
+        const mediaData: any = await mediaResponse.json();
+
+        if (!mediaResponse.ok) {
+            console.error('Failed to fetch Instagram media:', mediaData.error?.message);
+            return [];
+        }
+
+        return mediaData.data.map((post: any) => ({
+            text: post.caption || '',
+            username: 'instagram_user', // Username is not available from this endpoint
+            postUrl: post.permalink || '#',
+        }));
+
+    } catch (error) {
+        console.error('Error fetching Instagram data:', error);
+        return [];
+    }
 };
 
 
@@ -99,13 +137,9 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
     let neutral = 0;
 
     for (const item of data) {
-      const text = item.text || item.caption || item.title;
+      const text = item.text || '';
       if (text) {
         const score = analyzeSentiment(text);
-        // VADER sentiment scores:
-        // positive sentiment: compound score >= 0.05
-        // neutral sentiment: (compound score > -0.05) and (compound score < 0.05)
-        // negative sentiment: compound score <= -0.05
         if (score >= 0.05) {
           positive++;
         } else if (score <= -0.05) {

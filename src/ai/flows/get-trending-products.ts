@@ -1,7 +1,7 @@
 // src/ai/flows/get-trending-products.ts
 'use server';
 /**
- * @fileOverview Generates a list of currently trending products by analyzing simulated Instagram data.
+ * @fileOverview Generates a list of currently trending products by analyzing Instagram data.
  *
  * - getTrendingProducts - A function that generates a list of trending products.
  * - TrendingProductsOutput - The return type for the getTrendingProducts function.
@@ -10,6 +10,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import type { Product } from '@/lib/types';
+import fetch from 'node-fetch';
 
 const ProductReviewSchema = z.object({
     platform: z.literal('Instagram'),
@@ -18,21 +19,55 @@ const ProductReviewSchema = z.object({
     postUrl: z.string().describe("The direct URL to the social media post."),
 });
 
-// Data fetching function (Simulated)
+/**
+ * Fetches recent top media for a given hashtag from the Instagram Graph API.
+ * NOTE: This requires a valid User Access Token with the necessary permissions.
+ * The hashtag must be associated with the user's Instagram Business Account.
+ * A placeholder is returned if the API token is not configured.
+ */
 const fetchInstagramData = async (query: string) => {
-    console.log(`Simulating Instagram API call for query "${query}"...`);
-    // REAL IMPLEMENTATION would use the Instagram Graph API.
-    const mockPosts = {
-        'air fryer': [{ text: `Love my new air fryer! So crispy! #airfryer #kitchengadgets`, username: 'foodie123', postUrl: '#' }],
-        'skincare': [{ text: `This new serum is a game changer for my skin #skincare #glowup`, username: 'beauty_guru', postUrl: '#' }],
-        'running shoes': [{ text: `Crushed my morning run in these new kicks! #run #fitness`, username: 'runner_dave', postUrl: '#' }],
-    };
-    const posts = mockPosts[query as keyof typeof mockPosts] || [];
+    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
+    if (!accessToken) {
+        console.warn(`INSTAGRAM_ACCESS_TOKEN not found for query "${query}". Returning mock data. Please add it to your .env file.`);
+        // Return a single mock item so the app doesn't show an empty state.
+        return [
+            { text: `This is a sample post for ${query}. Configure the API key to see live data. #sample`, username: 'preview_user', postUrl: '#' },
+        ].map(p => ({ platform: 'Instagram' as const, ...p }));
+    }
     
-    return posts.map(p => ({
-        platform: 'Instagram' as const,
-        ...p
-    }));
+    const sanitizedQuery = query.replace(/\s+/g, '').toLowerCase();
+    const searchUrl = `https://graph.facebook.com/v20.0/ig_hashtag_search?user_id=me&q=${sanitizedQuery}&access_token=${accessToken}`;
+    
+    try {
+        const searchResponse = await fetch(searchUrl);
+        const searchData: any = await searchResponse.json();
+
+        if (!searchResponse.ok || !searchData.data || searchData.data.length === 0) {
+            console.error(`Failed to find Instagram hashtag for "${query}":`, searchData.error?.message || 'No hashtag found.');
+            return [];
+        }
+        
+        const hashtagId = searchData.data[0].id;
+        const mediaUrl = `https://graph.facebook.com/v20.0/${hashtagId}/top_media?user_id=me&fields=id,media_type,caption,permalink&limit=5&access_token=${accessToken}`;
+        const mediaResponse = await fetch(mediaUrl);
+        const mediaData: any = await mediaResponse.json();
+
+        if (!mediaResponse.ok) {
+            console.error(`Failed to fetch Instagram media for "${query}":`, mediaData.error?.message);
+            return [];
+        }
+
+        return mediaData.data.map((post: any) => ({
+            platform: 'Instagram' as const,
+            text: post.caption || '',
+            username: 'instagram_user', // Username is not available from this endpoint
+            postUrl: post.permalink || '#',
+        }));
+
+    } catch (error) {
+        console.error(`Error fetching Instagram data for "${query}":`, error);
+        return [];
+    }
 };
 
 
