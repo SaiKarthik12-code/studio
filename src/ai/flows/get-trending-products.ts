@@ -36,18 +36,20 @@ export async function getTrendingProducts(): Promise<Product[]> {
 const prompt = ai.definePrompt({
   name: 'getTrendingProductsPrompt',
   output: {schema: TrendingProductsOutputSchema},
-  prompt: `You are a market trend analyst. Your task is to identify 10 currently trending products based on real-world recent social media and market data.
+  prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to mine social media for viral product trends.
 
-For each product, provide the following information:
+Simulate a scan of TikTok, Instagram, X, and Reddit to identify 10 specific products that are currently gaining significant traction and are relevant to Walmart's inventory.
+
+For each product you identify, provide the following information:
 - A unique product ID (e.g., prod-001, prod-002).
-- The product name.
-- A plausible category (e.g., Drinkware, Electronics, Apparel, Beauty).
-- A forecasted weekly demand as a number.
-- An inventory status ('Understock', 'Optimal', 'Overstock'). If a product is very trendy, it should be 'Understock'. If it's a stable trend, make it 'Optimal'.
+- The specific product name (e.g., "Cosori Air Fryer" not just "Air Fryer").
+- A plausible Walmart category (e.g., Home Goods, Electronics, Apparel, Beauty, Groceries, Toys).
+- A forecasted weekly demand as a number, reflecting its viral velocity.
+- An inventory status: 'Understock' for new, explosive trends; 'Optimal' for established trends; 'Overstock' for fading trends.
 - A lastUpdated string, which should be 'Just now'.
-- A valid placeholder image URL. IMPORTANT: This URL must be a complete and valid URL from 'https://placehold.co' with a size of 64x64 and a unique color for each product. For example: 'https://placehold.co/64x64/22c55e/ffffff.png'.
+- A valid placeholder image URL from 'https://placehold.co' with a size of 64x64.
 
-Return the list of 10 products in the specified JSON format. Ensure the data is diverse and reflects current consumer interests.`,
+Return the list of 10 products in the specified JSON format. Ensure the data reflects a diverse range of categories and current consumer interests you'd expect to see trending online.`,
 });
 
 const trendingProductsFlow = ai.defineFlow(
