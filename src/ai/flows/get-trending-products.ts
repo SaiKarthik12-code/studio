@@ -36,7 +36,7 @@ export async function getTrendingProducts(): Promise<Product[]> {
 const prompt = ai.definePrompt({
   name: 'getTrendingProductsPrompt',
   output: {schema: TrendingProductsOutputSchema},
-  prompt: `You are a market trend analyst. Your task is to identify 5 currently trending products based on real-world recent social media and market data.
+  prompt: `You are a market trend analyst. Your task is to identify 10 currently trending products based on real-world recent social media and market data.
 
 For each product, provide the following information:
 - A unique product ID (e.g., prod-001, prod-002).
@@ -47,7 +47,7 @@ For each product, provide the following information:
 - A lastUpdated string, which should be 'Just now'.
 - A valid placeholder image URL. IMPORTANT: This URL must be a complete and valid URL from 'https://placehold.co' with a size of 64x64 and a unique color for each product. For example: 'https://placehold.co/64x64/22c55e/ffffff.png'.
 
-Return the list of 5 products in the specified JSON format. Ensure the data is diverse and reflects current consumer interests.`,
+Return the list of 10 products in the specified JSON format. Ensure the data is diverse and reflects current consumer interests.`,
 });
 
 const trendingProductsFlow = ai.defineFlow(
