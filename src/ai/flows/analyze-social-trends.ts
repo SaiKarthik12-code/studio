@@ -3,7 +3,7 @@
 'use server';
 
 /**
- * @fileOverview Analyzes real-time social media trends for specific products by fetching live data from Instagram.
+ * @fileOverview Analyzes real-time social media trends for specific products by fetching live data from Instagram, Twitter/X, and Reddit.
  *
  * - analyzeSocialTrends - Analyzes real-time social media trends for specific products.
  * - AnalyzeSocialTrendsInput - The input type for the analyzeSocialTrends function.
@@ -27,23 +27,13 @@ const analyzeText = (text: string): string[] => {
   return text.toLowerCase().match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
 }
 
-/**
- * Fetches recent top media for a given hashtag from the Instagram Graph API.
- * NOTE: This requires a valid User Access Token with the necessary permissions.
- * The hashtag must be associated with the user's Instagram Business Account.
- * A placeholder is returned if the API token is not configured.
- */
 const fetchInstagramData = async (productName: string) => {
     const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
     if (!accessToken) {
         console.warn("INSTAGRAM_ACCESS_TOKEN not found. Returning mock data. Please add it to your .env file.");
-        // Return a single mock item so the app doesn't show an empty state.
-        return [
-            { text: `This is a sample post for ${productName}. Configure the API key to see live data. #sample`, username: 'preview_user', postUrl: '#' },
-        ];
+        return [{ platform: 'Instagram' as const, text: `This is a sample post for ${productName}. #sample`, username: 'preview_user', postUrl: '#' }];
     }
     
-    // 1. Get the ID for the hashtag
     const sanitizedProductName = productName.replace(/\s+/g, '').toLowerCase();
     const searchUrl = `https://graph.facebook.com/v20.0/ig_hashtag_search?user_id=me&q=${sanitizedProductName}&access_token=${accessToken}`;
     
@@ -57,8 +47,6 @@ const fetchInstagramData = async (productName: string) => {
         }
         
         const hashtagId = searchData.data[0].id;
-
-        // 2. Get recent top media for that hashtag
         const mediaUrl = `https://graph.facebook.com/v20.0/${hashtagId}/top_media?user_id=me&fields=id,media_type,caption,permalink&limit=10&access_token=${accessToken}`;
         const mediaResponse = await fetch(mediaUrl);
         const mediaData: any = await mediaResponse.json();
@@ -69,17 +57,74 @@ const fetchInstagramData = async (productName: string) => {
         }
 
         return mediaData.data.map((post: any) => ({
+            platform: 'Instagram' as const,
             text: post.caption || '',
-            username: 'instagram_user', // Username is not available from this endpoint
+            username: 'instagram_user',
             postUrl: post.permalink || '#',
         }));
-
     } catch (error) {
         console.error('Error fetching Instagram data:', error);
         return [];
     }
 };
 
+const fetchTwitterData = async (productName: string) => {
+    const bearerToken = process.env.X_BEARER_TOKEN;
+    if (!bearerToken) {
+        console.warn("X_BEARER_TOKEN not found. Returning mock data.");
+        return [{ platform: 'Twitter' as const, text: `Mock tweet about ${productName}! #mock`, username: 'mock_user', postUrl: '#' }];
+    }
+    
+    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(productName)}&tweet.fields=text,author_id,id&expansions=author_id&max_results=10`;
+    
+    try {
+        const response = await fetch(url, { headers: { 'Authorization': `Bearer ${bearerToken}` } });
+        const data: any = await response.json();
+        
+        if (!response.ok || !data.data) {
+            console.error('Failed to fetch Twitter data:', data.errors?.[0]?.message || 'Unknown error');
+            return [];
+        }
+        
+        const users = new Map(data.includes?.users?.map((user: any) => [user.id, user.username]) || []);
+        
+        return data.data.map((tweet: any) => ({
+            platform: 'Twitter' as const,
+            text: tweet.text || '',
+            username: users.get(tweet.author_id) || 'twitter_user',
+            postUrl: `https://twitter.com/${users.get(tweet.author_id) || 'i'}/status/${tweet.id}`,
+        }));
+    } catch (error) {
+        console.error('Error fetching Twitter data:', error);
+        return [];
+    }
+};
+
+const fetchRedditData = async (productName: string) => {
+    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(productName)}&limit=10&sort=hot`;
+    try {
+        const response = await fetch(url, { headers: { 'User-Agent': 'node:firebase-studio-app:v1.0' } });
+        const data: any = await response.json();
+        if (!data.data || !data.data.children) return [];
+        
+        return data.data.children.map((post: any) => ({
+            platform: 'Reddit' as const,
+            text: post.data.title || '',
+            username: post.data.author || 'reddit_user',
+            postUrl: `https://www.reddit.com${post.data.permalink}` || '#',
+        }));
+    } catch (error) {
+        console.error('Error fetching Reddit data:', error);
+        return [];
+    }
+};
+
+const fetchTikTokData = async (productName: string) => {
+    console.warn("TikTok API is not implemented. Returning mock data.");
+    return [
+        { platform: 'TikTok' as const, text: `Check out this amazing ${productName}! So cool! #fyp`, username: 'tiktok_trendsetter', postUrl: '#' },
+    ];
+};
 
 const AnalyzeSocialTrendsInputSchema = z.object({
   productName: z.string().describe('The name of the product to analyze.'),
@@ -97,17 +142,15 @@ const AnalyzeSocialTrendsOutputSchema = z.object({
     .describe('The trending topics related to the product.'),
   volume: z.number().describe('The volume of mentions of the product.'),
   sentimentBreakdown: z.object({
-    Instagram: z.object({
-      positive: z.number(),
-      negative: z.number(),
-      neutral: z.number(),
-    }),
+    Instagram: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
+    Twitter: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
+    Reddit: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
+    TikTok: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
   }).describe('Sentiment breakdown by platform with specific sentiment values.'),
 });
 export type AnalyzeSocialTrendsOutput = z.infer<
   typeof AnalyzeSocialTrendsOutputSchema
 >;
-
 
 export async function analyzeSocialTrends(
   input: AnalyzeSocialTrendsInput
@@ -126,41 +169,45 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
     
     const sentimentBreakdown: AnalyzeSocialTrendsOutput["sentimentBreakdown"] = {
       Instagram: { positive: 0, negative: 0, neutral: 0 },
+      Twitter: { positive: 0, negative: 0, neutral: 0 },
+      Reddit: { positive: 0, negative: 0, neutral: 0 },
+      TikTok: { positive: 0, negative: 0, neutral: 0 },
     };
 
     const trendingTopics = new Set<string>();
 
-    const data = await fetchInstagramData(productName);
+    const instagramData = await fetchInstagramData(productName);
+    const twitterData = await fetchTwitterData(productName);
+    const redditData = await fetchRedditData(productName);
+    const tiktokData = await fetchTikTokData(productName);
 
-    let positive = 0;
-    let negative = 0;
-    let neutral = 0;
+    const allData = [...instagramData, ...twitterData, ...redditData, ...tiktokData];
+    let totalMentions = 0;
 
-    for (const item of data) {
+    for (const item of allData) {
+      totalMentions++;
       const text = item.text || '';
       if (text) {
         const score = analyzeSentiment(text);
         if (score >= 0.05) {
-          positive++;
+          sentimentBreakdown[item.platform].positive++;
         } else if (score <= -0.05) {
-          negative++;
+          sentimentBreakdown[item.platform].negative++;
         } else {
-          neutral++;
+          sentimentBreakdown[item.platform].neutral++;
         }
         
         const topics = analyzeText(text);
         topics.forEach(topic => trendingTopics.add(topic));
       }
     }
-    
-    sentimentBreakdown.Instagram = { positive, negative, neutral };
 
     const overallSentiment = calculateOverallSentiment(sentimentBreakdown);
 
     return {
       overallSentiment,
       trendingTopics: Array.from(trendingTopics),
-      volume: data.length,
+      volume: totalMentions,
       sentimentBreakdown,
     };
   }

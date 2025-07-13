@@ -1,3 +1,5 @@
+export type SocialPlatform = 'Instagram' | 'Twitter' | 'Reddit' | 'TikTok';
+
 export interface Product {
   id: string;
   name: string;
@@ -7,7 +9,7 @@ export interface Product {
   lastUpdated: string;
   imageUrl: string;
   reviews?: {
-    platform: 'Instagram';
+    platform: SocialPlatform;
     text: string;
     username: string;
     postUrl: string;
