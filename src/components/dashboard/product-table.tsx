@@ -28,59 +28,25 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import type { Product } from '@/lib/types';
-import { useState } from 'react';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-
-const products: Product[] = [
-  {
-    id: 'prod-001',
-    name: 'Stanley Quencher Tumbler',
-    category: 'Drinkware',
-    forecastedDemand: 1200,
-    inventoryStatus: 'Understock',
-    lastUpdated: '2 hours ago',
-    imageUrl: 'https://placehold.co/64x64/1d4ed8/ffffff.png',
-  },
-  {
-    id: 'prod-002',
-    name: 'Organic Avocadoes (4-pack)',
-    category: 'Groceries',
-    forecastedDemand: 800,
-    inventoryStatus: 'Optimal',
-    lastUpdated: '1 day ago',
-    imageUrl: 'https://placehold.co/64x64/22c55e/ffffff.png',
-  },
-  {
-    id: 'prod-003',
-    name: 'LEGO Star Wars Set',
-    category: 'Toys',
-    forecastedDemand: 350,
-    inventoryStatus: 'Overstock',
-    lastUpdated: '5 hours ago',
-    imageUrl: 'https://placehold.co/64x64/facc15/000000.png',
-  },
-  {
-    id: 'prod-004',
-    name: 'Great Value Milk',
-    category: 'Groceries',
-    forecastedDemand: 2500,
-    inventoryStatus: 'Optimal',
-    lastUpdated: '30 minutes ago',
-    imageUrl: 'https://placehold.co/64x64/f8fafc/000000.png',
-  },
-  {
-    id: 'prod-005',
-    name: 'Nintendo Switch OLED',
-    category: 'Electronics',
-    forecastedDemand: 600,
-    inventoryStatus: 'Understock',
-    lastUpdated: '8 hours ago',
-    imageUrl: 'https://placehold.co/64x64/ef4444/ffffff.png',
-  },
-];
+import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { fetchProducts } from '@/lib/data';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function ProductTable() {
+  const [products, setProducts] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    const getProducts = async () => {
+      setIsLoading(true);
+      const fetchedProducts = await fetchProducts();
+      setProducts(fetchedProducts);
+      setIsLoading(false);
+    };
+    getProducts();
+  }, []);
 
   const getStatusBadgeClass = (status: Product['inventoryStatus']) => {
     switch (status) {
@@ -123,50 +89,75 @@ export function ProductTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {products.map((product) => (
-              <TableRow key={product.id}>
-                <TableCell className="hidden sm:table-cell">
-                  <Image
-                    alt="Product image"
-                    className="aspect-square rounded-md object-cover"
-                    height="64"
-                    src={product.imageUrl}
-                    width="64"
-                    data-ai-hint={product.name.toLowerCase().split(' ').slice(0, 2).join(' ')}
-                  />
-                </TableCell>
-                <TableCell className="font-medium">{product.name}</TableCell>
-                <TableCell>
-                  <Badge
-                    variant="outline"
-                    className={getStatusBadgeClass(product.inventoryStatus)}
-                  >
-                    {product.inventoryStatus}
-                  </Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {product.forecastedDemand.toLocaleString()} units
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                  {product.category}
-                </TableCell>
-                <TableCell>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button aria-haspopup="true" size="icon" variant="ghost">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Toggle menu</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                      <DropdownMenuItem onSelect={() => setSelectedProduct(product)}>View Details</DropdownMenuItem>
-                      <DropdownMenuItem>Adjust Forecast</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
-            ))}
+            {isLoading ? (
+              Array.from({ length: 5 }).map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell className="hidden sm:table-cell">
+                    <Skeleton className="h-16 w-16 rounded-md" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-6 w-48" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-6 w-24" />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    <Skeleton className="h-6 w-20" />
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                     <Skeleton className="h-6 w-28" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-8" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              products.map((product) => (
+                <TableRow key={product.id}>
+                  <TableCell className="hidden sm:table-cell">
+                    <Image
+                      alt="Product image"
+                      className="aspect-square rounded-md object-cover"
+                      height="64"
+                      src={product.imageUrl}
+                      width="64"
+                      data-ai-hint={product.name.toLowerCase().split(' ').slice(0, 2).join(' ')}
+                    />
+                  </TableCell>
+                  <TableCell className="font-medium">{product.name}</TableCell>
+                  <TableCell>
+                    <Badge
+                      variant="outline"
+                      className={getStatusBadgeClass(product.inventoryStatus)}
+                    >
+                      {product.inventoryStatus}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {product.forecastedDemand.toLocaleString()} units
+                  </TableCell>
+                  <TableCell className="hidden md:table-cell">
+                    {product.category}
+                  </TableCell>
+                  <TableCell>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button aria-haspopup="true" size="icon" variant="ghost">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Toggle menu</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuItem onSelect={() => setSelectedProduct(product)}>View Details</DropdownMenuItem>
+                        <DropdownMenuItem>Adjust Forecast</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
           </TableBody>
         </Table>
       </CardContent>
