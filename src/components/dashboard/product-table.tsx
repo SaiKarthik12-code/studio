@@ -132,7 +132,7 @@ export function ProductTable() {
                     height="64"
                     src={product.imageUrl}
                     width="64"
-                    data-ai-hint={`${product.category} product`}
+                    data-ai-hint={product.name.toLowerCase().split(' ').slice(0, 2).join(' ')}
                   />
                 </TableCell>
                 <TableCell className="font-medium">{product.name}</TableCell>
@@ -189,7 +189,7 @@ export function ProductTable() {
                             width={128}
                             height={128}
                             className="rounded-lg border"
-                            data-ai-hint={`${selectedProduct.category} product`}
+                            data-ai-hint={selectedProduct.name.toLowerCase().split(' ').slice(0, 2).join(' ')}
                         />
                     </div>
                     <div className="grid grid-cols-2 gap-x-8 gap-y-2">
