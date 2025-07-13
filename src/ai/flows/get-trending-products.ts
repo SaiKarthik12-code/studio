@@ -18,7 +18,7 @@ const TrendingProductSchema = z.object({
   forecastedDemand: z.number().describe('The estimated weekly demand for this product.'),
   inventoryStatus: z.enum(['Optimal', 'Overstock', 'Understock']).describe('The current inventory status based on the trend.'),
   lastUpdated: z.string().describe("A human-readable string indicating when this data was generated, e.g., 'Just now'."),
-  imageUrl: z.string().url().describe('A placeholder image URL for the product.'),
+  imageUrl: z.string().describe('A placeholder image URL for the product.'),
 });
 
 const TrendingProductsOutputSchema = z.object({
