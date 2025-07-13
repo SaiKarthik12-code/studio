@@ -37,13 +37,19 @@ const AnalyzeSocialTrendsOutputSchema = z.object({
     .array(z.string())
     .describe('The trending topics related to the product.'),
   volume: z.number().describe('The volume of mentions of the product.'),
-  sentimentBreakdown: z
-    .record(z.string(), z.number())
-    .describe('Sentiment breakdown by platform (positive, negative, neutral).'),
+  sentimentBreakdown: z.record(
+    z.string(),
+    z.object({
+      positive: z.number(),
+      negative: z.number(),
+      neutral: z.number(),
+    })
+  ).describe('Sentiment breakdown by platform with specific sentiment values.'),
 });
 export type AnalyzeSocialTrendsOutput = z.infer<
   typeof AnalyzeSocialTrendsOutputSchema
 >;
+
 
 export async function analyzeSocialTrends(
   input: AnalyzeSocialTrendsInput
@@ -55,7 +61,7 @@ const prompt = ai.definePrompt({
   name: 'analyzeSocialTrendsPrompt',
   input: {schema: AnalyzeSocialTrendsInputSchema},
   output: {schema: AnalyzeSocialTrendsOutputSchema},
-  prompt: `You are a social media analyst tasked with identifying trending products.
+  prompt: `You are a social media analyst tasked with identifying trending products and their sentiment.
 
   Analyze real-time social media trends for {{productName}} on the following platforms: {{socialMediaPlatforms}} over the past {{timeframe}}.
 
@@ -63,7 +69,9 @@ const prompt = ai.definePrompt({
   List the trending topics related to the product.
   Determine the volume of mentions of the product.
   Provide a sentiment breakdown by platform (positive, negative, neutral).
-
+  For the sentiment breakdown, provide specific values for positive, negative, and neutral sentiment for each platform. Do not use a generic record type. For example:
+  { "TikTok": { "positive": 50, "negative": 10, "neutral": 40 }, "Instagram": { "positive": 60, "negative": 5, "neutral": 35 } }
+  
   Return the information in JSON format.
   `,
 });
