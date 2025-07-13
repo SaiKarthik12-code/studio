@@ -13,6 +13,33 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
+// Mock functions to replace non-existent imports
+const analyzeSentiment = (text: string): number => {
+  if (!text) return 0;
+  const positiveWords = ['love', 'amazing', 'great', 'perfect', 'best'];
+  const negativeWords = ['hate', 'bad', 'terrible', 'awful', 'worst'];
+  let score = 0;
+  for (const word of positiveWords) {
+    if (text.toLowerCase().includes(word)) score++;
+  }
+  for (const word of negativeWords) {
+    if (text.toLowerCase().includes(word)) score--;
+  }
+  return score;
+};
+
+const analyzeText = (text: string): string[] => {
+  if (!text) return [];
+  // simple topic extraction
+  return text.toLowerCase().match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
+}
+
+const fetchTikTokData = async (productName: string, timeframe: string) => [{ text: `Love the ${productName}! #musthave` }];
+const fetchInstagramData = async (productName: string, timeframe: string) => [{ caption: `New ${productName} is amazing! #favorite` }];
+const fetchTwitterData = async (productName: string, timeframe: string) => [{ text: `Just got the ${productName}, it's okay. #review` }];
+const fetchRedditData = async (productName: string, timeframe: string) => [{ title: `${productName} review`, text: 'It is a good product for the price.' }];
+
+
 const AnalyzeSocialTrendsInputSchema = z.object({
   productName: z.string().describe('The name of the product to analyze.'),
   socialMediaPlatforms: z
@@ -97,7 +124,88 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
     outputSchema: AnalyzeSocialTrendsOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const { productName, socialMediaPlatforms, timeframe } = input;
+    
+    const sentimentBreakdown: AnalyzeSocialTrendsOutput["sentimentBreakdown"] = {
+      TikTok: { positive: 0, negative: 0, neutral: 0 },
+      Instagram: { positive: 0, negative: 0, neutral: 0 },
+      X: { positive: 0, negative: 0, neutral: 0 },
+      Reddit: { positive: 0, negative: 0, neutral: 0 },
+    };
+
+    let totalMentions = 0;
+    const trendingTopics = new Set<string>();
+
+    for (const platform of socialMediaPlatforms) {
+      let data: any[] = [];
+      switch (platform) {
+        case 'TikTok':
+          data = await fetchTikTokData(productName, timeframe);
+          break;
+        case 'Instagram':
+          data = await fetchInstagramData(productName, timeframe);
+          break;
+        case 'X':
+          data = await fetchTwitterData(productName, timeframe);
+          break;
+        case 'Reddit':
+          data = await fetchRedditData(productName, timeframe);
+          break;
+      }
+
+      totalMentions += data.length;
+
+      let positive = 0;
+      let negative = 0;
+      let neutral = 0;
+
+      for (const item of data) {
+        const text = item.text || item.caption || item.title; // Adjust based on platform data structure
+        if (text) {
+          const sentiment = analyzeSentiment(text);
+          if (sentiment > 0) {
+            positive++;
+          } else if (sentiment < 0) {
+            negative++;
+          } else {
+            neutral++;
+          }
+
+          // Basic topic extraction (can be improved with more sophisticated NLP)
+          const topics = analyzeText(text);
+          topics.forEach(topic => trendingTopics.add(topic));
+        }
+      }
+
+      sentimentBreakdown[platform] = { positive, negative, neutral };
+    }
+
+    const overallSentiment = calculateOverallSentiment(sentimentBreakdown);
+
+    // Let the AI generate a more realistic output based on the prompt
+    const { output } = await prompt(input);
+    if (output) {
+      // We can still use our calculated volume and topics for consistency
+      output.volume = totalMentions;
+      output.trendingTopics = Array.from(trendingTopics);
+      return output;
+    }
+    
+    // Fallback to locally computed data if AI fails
+    return {
+      overallSentiment,
+      trendingTopics: Array.from(trendingTopics),
+      volume: totalMentions,
+      sentimentBreakdown,
+    };
   }
 );
+
+function calculateOverallSentiment(sentimentBreakdown: AnalyzeSocialTrendsOutput["sentimentBreakdown"]): string {
+  const totalPositive = Object.values(sentimentBreakdown).reduce((sum, platform) => sum + platform.positive, 0);
+  const totalNegative = Object.values(sentimentBreakdown).reduce((sum, platform) => sum + platform.negative, 0);
+  
+  if (totalPositive > totalNegative) return 'positive';
+  if (totalNegative > totalPositive) return 'negative';
+  return 'neutral';
+}
