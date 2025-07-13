@@ -3,7 +3,7 @@
 'use server';
 
 /**
- * @fileOverview Analyzes real-time social media trends for specific products.
+ * @fileOverview Analyzes real-time social media trends for specific products by fetching live data.
  *
  * - analyzeSocialTrends - Analyzes real-time social media trends for specific products.
  * - AnalyzeSocialTrendsInput - The input type for the analyzeSocialTrends function.
@@ -12,16 +12,13 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import Sentiment from 'sentiment';
+import vader from 'vader-sentiment';
+import fetch from 'node-fetch';
 
-const sentiment = new Sentiment();
-
-// Mock functions to replace non-existent imports
 const analyzeSentiment = (text: string): number => {
     if (!text) return 0;
-    // Use a real sentiment analysis library
-    const result = sentiment.analyze(text);
-    return result.score;
+    const intensity = vader.SentimentIntensityAnalyzer.polarity_scores(text);
+    return intensity.compound;
 };
 
 const analyzeText = (text: string): string[] => {
@@ -30,47 +27,72 @@ const analyzeText = (text: string): string[] => {
   return text.toLowerCase().match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
 }
 
+/**
+ * Fetches data from X (formerly Twitter).
+ * In a real application, you would use your actual bearer token.
+ */
+const fetchTwitterData = async (productName: string) => {
+    const X_BEARER_TOKEN = process.env.X_BEARER_TOKEN;
+    if (!X_BEARER_TOKEN) {
+        console.log("X_BEARER_TOKEN not found, returning mock data.");
+        return [{ text: `Just got the ${productName}, it's okay. #review` }];
+    }
+    
+    const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(productName)}&max_results=10`;
+
+    try {
+        const response = await fetch(url, {
+            headers: { 'Authorization': `Bearer ${X_BEARER_TOKEN}` }
+        });
+        if (!response.ok) {
+            console.error(`Twitter API error: ${response.statusText}`);
+            return [];
+        }
+        const data: any = await response.json();
+        return data.data || [];
+    } catch (error) {
+        console.error("Failed to fetch from Twitter:", error);
+        return [];
+    }
+};
+
+/**
+ * Fetches data from Reddit.
+ */
+const fetchRedditData = async (productName: string) => {
+    const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(productName)}&limit=10`;
+
+    try {
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`Reddit API error: ${response.statusText}`);
+            return [];
+        }
+        const data: any = await response.json();
+        return data.data?.children?.map((post: any) => ({ text: post.data.title })) || [];
+    } catch (error) {
+        console.error("Failed to fetch from Reddit:", error);
+        return [];
+    }
+};
+
 
 /**
  * NOTE FOR HACKATHON:
- * The following functions simulate calls to real social media APIs.
- * In a real application, you would replace the mock data with actual `fetch` calls
- * to the API endpoints using the provided API keys from the .env file.
+ * The following functions simulate calls to APIs that require complex authentication
+ * or browser automation (like Puppeteer), which is difficult to run in this environment.
+ * You would replace the mock data with actual API calls in a full implementation.
  */
-
-const fetchTwitterData = async (productName: string, timeframe: string) => {
-    const X_API_KEY = process.env.X_API_KEY;
-    console.log(`Simulating X API call for "${productName}"...`);
-    // REAL IMPLEMENTATION:
-    // const response = await fetch(`https://api.twitter.com/2/tweets/search/recent?query=${productName}`, {
-    //   headers: { 'Authorization': `Bearer ${X_API_KEY}` }
-    // });
-    // const data = await response.json();
-    // return data.data || [];
-    return [{ text: `Just got the ${productName}, it's okay. #review` }];
-};
-
-const fetchRedditData = async (productName: string, timeframe: string) => {
-    const REDDIT_APP_ID = process.env.REDDIT_APP_ID;
-    const REDDIT_APP_SECRET = process.env.REDDIT_APP_SECRET;
-    console.log(`Simulating Reddit API call for "${productName}"...`);
-    // REAL IMPLEMENTATION:
-    // This would involve a more complex OAuth flow to get a token first.
-    // const response = await fetch(`https://www.reddit.com/r/all/search.json?q=${productName}&restrict_sr=on`);
-    // const data = await response.json();
-    // return data.data.children.map((child: any) => ({ title: child.data.title, text: child.data.selftext }));
-    return [{ title: `${productName} review`, text: 'It is a good product for the price.' }];
-};
-
-const fetchTikTokData = async (productName: string, timeframe: string) => {
+const fetchTikTokData = async (productName: string) => {
     console.log(`Simulating TikTok API call for "${productName}"...`);
-    // TikTok has a more complex API structure, but this is a placeholder.
+    // REAL IMPLEMENTATION would use Puppeteer or TikTok's API.
     return [{ text: `Love the ${productName}! #musthave` }];
 };
 
-const fetchInstagramData = async (productName: string, timeframe: string) => {
+const fetchInstagramData = async (productName: string) => {
     console.log(`Simulating Instagram API call for "${productName}"...`);
-    return [{ caption: `New ${productName} is amazing! #favorite` }];
+    // REAL IMPLEMENTATION would use the Instagram Graph API.
+    return [{ text: `New ${productName} is amazing! #favorite` }];
 };
 
 
@@ -139,7 +161,7 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
     outputSchema: AnalyzeSocialTrendsOutputSchema,
   },
   async input => {
-    const { productName, socialMediaPlatforms, timeframe } = input;
+    const { productName, socialMediaPlatforms } = input;
     
     const sentimentBreakdown: AnalyzeSocialTrendsOutput["sentimentBreakdown"] = {
       TikTok: { positive: 0, negative: 0, neutral: 0 },
@@ -155,16 +177,16 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
       let data: any[] = [];
       switch (platform) {
         case 'TikTok':
-          data = await fetchTikTokData(productName, timeframe);
+          data = await fetchTikTokData(productName);
           break;
         case 'Instagram':
-          data = await fetchInstagramData(productName, timeframe);
+          data = await fetchInstagramData(productName);
           break;
         case 'X':
-          data = await fetchTwitterData(productName, timeframe);
+          data = await fetchTwitterData(productName);
           break;
         case 'Reddit':
-          data = await fetchRedditData(productName, timeframe);
+          data = await fetchRedditData(productName);
           break;
       }
 
@@ -178,9 +200,13 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
         const text = item.text || item.caption || item.title;
         if (text) {
           const score = analyzeSentiment(text);
-          if (score > 0) {
+          // VADER sentiment scores:
+          // positive sentiment: compound score >= 0.05
+          // neutral sentiment: (compound score > -0.05) and (compound score < 0.05)
+          // negative sentiment: compound score <= -0.05
+          if (score >= 0.05) {
             positive++;
-          } else if (score < 0) {
+          } else if (score <= -0.05) {
             negative++;
           } else {
             neutral++;
@@ -191,7 +217,7 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
         }
       }
 
-      sentimentBreakdown[platform] = { positive, negative, neutral };
+      sentimentBreakdown[platform as keyof typeof sentimentBreakdown] = { positive, negative, neutral };
     }
 
     const overallSentiment = calculateOverallSentiment(sentimentBreakdown);

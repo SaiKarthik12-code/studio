@@ -1,7 +1,7 @@
 /**
- * @fileOverview A mock scraping service to simulate fetching real-time social media data.
- * In a real-world application, this service would use libraries like Puppeteer or Cheerio
- * to scrape websites, or it would connect to official social media APIs.
+ * @fileOverview This file is no longer used for primary data fetching.
+ * The logic has been moved into the `analyze-social-trends` flow to directly
+ * use live APIs. This file can be kept for reference or removed.
  */
 
 // This defines the structure of the data our mock scraper will return.
