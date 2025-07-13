@@ -2,7 +2,7 @@
 'use client';
 
 import Image from 'next/image';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, Loader2, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -32,11 +32,17 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { fetchProducts } from '@/lib/data';
 import { Skeleton } from '@/components/ui/skeleton';
+import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
+import { Separator } from '../ui/separator';
 
 export function ProductTable() {
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<AnalyzeSocialTrendsOutput | null>(null);
+  const [analysisError, setAnalysisError] = useState<string | null>(null);
+
 
   useEffect(() => {
     const getProducts = async () => {
@@ -47,6 +53,31 @@ export function ProductTable() {
     };
     getProducts();
   }, []);
+
+  const handleAnalyzeTrends = async (productName: string) => {
+    if (!productName) return;
+    setIsAnalyzing(true);
+    setAnalysisResult(null);
+    setAnalysisError(null);
+    try {
+      const result = await analyzeSocialTrends({
+        productName,
+        socialMediaPlatforms: ['TikTok', 'Instagram', 'X'],
+      });
+      setAnalysisResult(result);
+    } catch (error) {
+      setAnalysisError('Failed to analyze trends. Please try again.');
+      console.error(error);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const handleDialogClose = () => {
+    setSelectedProduct(null);
+    setAnalysisResult(null);
+    setAnalysisError(null);
+  }
 
   const getStatusBadgeClass = (status: Product['inventoryStatus']) => {
     switch (status) {
@@ -164,8 +195,8 @@ export function ProductTable() {
     </Card>
 
     {selectedProduct && (
-        <Dialog open={!!selectedProduct} onOpenChange={(isOpen) => !isOpen && setSelectedProduct(null)}>
-            <DialogContent>
+        <Dialog open={!!selectedProduct} onOpenChange={(isOpen) => !isOpen && handleDialogClose()}>
+            <DialogContent className="max-w-lg">
                 <DialogHeader>
                     <DialogTitle>{selectedProduct.name}</DialogTitle>
                     <DialogDescription>
@@ -202,6 +233,51 @@ export function ProductTable() {
 
                         <div className="font-semibold">Last Updated</div>
                         <div>{selectedProduct.lastUpdated}</div>
+                    </div>
+
+                    <Separator className="my-2" />
+                    
+                    <div className="space-y-4">
+                      <Button onClick={() => handleAnalyzeTrends(selectedProduct.name)} disabled={isAnalyzing} className="w-full">
+                        {isAnalyzing ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Zap className="mr-2 h-4 w-4" />
+                        )}
+                        Analyze Live Trends
+                      </Button>
+
+                      {isAnalyzing && (
+                        <div className="text-center text-sm text-muted-foreground">
+                          AI is analyzing social signals...
+                        </div>
+                      )}
+
+                      {analysisError && <div className="text-sm text-destructive text-center">{analysisError}</div>}
+
+                      {analysisResult && (
+                        <div className="space-y-4 rounded-lg border bg-secondary/50 p-4">
+                          <h4 className="font-semibold text-center">Live Trend Analysis</h4>
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <div className="font-medium">Overall Sentiment</div>
+                              <div className="text-lg font-bold capitalize">{analysisResult.overallSentiment}</div>
+                            </div>
+                            <div>
+                              <div className="font-medium">Mention Volume</div>
+                              <div className="text-lg font-bold">{analysisResult.volume.toLocaleString()}</div>
+                            </div>
+                            <div className="col-span-2">
+                              <div className="font-medium">Trending Topics</div>
+                              <div className="flex flex-wrap gap-1 mt-1">
+                                {analysisResult.trendingTopics.map((topic, i) => (
+                                    <span key={i} className="px-2 py-0.5 text-xs rounded-full bg-secondary text-secondary-foreground">{topic}</span>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </div>
                 </div>
             </DialogContent>
