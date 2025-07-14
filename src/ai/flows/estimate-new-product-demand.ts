@@ -1,15 +1,14 @@
-// src/ai/flows/estimate-new-product-demand.ts
 'use server';
+
 /**
  * @fileOverview Estimates the demand for a new product using transfer learning based on similar products and social media trends.
- *
  * - estimateNewProductDemand - A function that handles the estimation of demand for a new product.
  * - EstimateNewProductDemandInput - The input type for the estimateNewProductDemand function.
  * - EstimateNewProductDemandOutput - The return type for the estimateNewProductDemand function.
  */
 
-import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 
 const EstimateNewProductDemandInputSchema = z.object({
   newProductName: z.string().describe('The name of the new product.'),
@@ -29,46 +28,40 @@ const EstimateNewProductDemandOutputSchema = z.object({
 
 export type EstimateNewProductDemandOutput = z.infer<typeof EstimateNewProductDemandOutputSchema>;
 
-export async function estimateNewProductDemand(input: EstimateNewProductDemandInput): Promise<EstimateNewProductDemandOutput> {
-  return await estimateNewProductDemandFlow(input);
-}
-
 const prompt = ai.definePrompt({
   name: 'estimateNewProductDemandPrompt',
-  input: {schema: EstimateNewProductDemandInputSchema},
-  output: {schema: EstimateNewProductDemandOutputSchema},
-  prompt: `You are an expert in demand forecasting, especially for new products with no prior sales history.
+  input: { schema: EstimateNewProductDemandInputSchema },
+  output: { schema: EstimateNewProductDemandOutputSchema },
+  prompt: `
+You are an expert in demand forecasting, especially for new products with no prior sales history.
 
-  You will use transfer learning, leveraging data from similar products and current social media trends, to estimate the demand for a new product.
+You will use transfer learning, leveraging data from similar products and current social media trends, to estimate the demand for a new product.
 
-  New Product Name: {{{newProductName}}}
-  Similar Products: {{{similarProductNames}}}
-  Social Media Trends: {{{socialMediaTrends}}}
-  POS Data (if available): {{{posData}}}
-  Weather Data (if available): {{{weatherData}}}
-  Location Data (if available): {{{locationData}}}
+New Product Name: {{{newProductName}}}
+Similar Products: {{{similarProductNames}}}
+Social Media Trends: {{{socialMediaTrends}}}
+POS Data (if available): {{{posData}}}
+Weather Data (if available): {{{weatherData}}}
+Location Data (if available): {{{locationData}}}
 
-  Based on this information, provide an estimate of the demand for the new product and explain your reasoning.
-  Format your output as JSON according to the schema.  Make sure to include the units for estimatedDemand.
-  Be conservative in your estimate.
-  `, 
+Based on this information, provide an estimate of the demand for the new product and explain your reasoning.
+Format your output as JSON according to the schema. Make sure to include the units for estimatedDemand.
+Be conservative in your estimate.
+`
 });
 
-const estimateNewProductDemandFlow = ai.defineFlow(
-  {
-    name: 'estimateNewProductDemandFlow',
-    inputSchema: EstimateNewProductDemandInputSchema,
-    outputSchema: EstimateNewProductDemandOutputSchema,
-  },
-  async input => {
-    const { output } = await prompt(input);
+/**
+ * ✅ Fixed Function – This is what 'use server' expects.
+ */
+export async function estimateNewProductDemand(
+  input: EstimateNewProductDemandInput
+): Promise<EstimateNewProductDemandOutput> {
+  const { output } = await prompt(input);
 
-if (!output) {
-  console.error('Prompt returned undefined');
-  throw new Error('Prompt execution failed');
-}
-
-return output;
-
+  if (!output) {
+    console.error('Prompt returned undefined');
+    throw new Error('Prompt execution failed');
   }
-);
+
+  return output;
+}
