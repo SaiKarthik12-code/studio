@@ -23,6 +23,7 @@ const ProductReviewSchema = z.object({
 
 const fetchTwitterData = async (query: string) => {
     const bearerToken = process.env.X_BEARER_TOKEN;
+    console.log("Loaded X_BEARER_TOKEN:", bearerToken);
     if (!bearerToken) {
         console.warn(`X_BEARER_TOKEN not found for query "${query}". Returning empty array.`);
         return [];
