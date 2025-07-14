@@ -29,9 +29,9 @@ const analyzeText = (text: string): string[] => {
 
 const fetchInstagramData = async (productName: string) => {
     const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-    if (!accessToken || accessToken === 'YOUR_INSTAGRAM_ACCESS_TOKEN') {
-        console.warn("INSTAGRAM_ACCESS_TOKEN not found or is a placeholder. Returning mock data. Please add it to your .env file.");
-        return [{ platform: 'Instagram' as const, text: `This is a sample post for ${productName}. #sample`, username: 'preview_user', postUrl: 'https://www.instagram.com/p/C_2Z8Z_y_4b/' }];
+    if (!accessToken) {
+        console.warn("INSTAGRAM_ACCESS_TOKEN not found. Returning empty array.");
+        return [];
     }
     
     const sanitizedProductName = productName.replace(/\s+/g, '').toLowerCase();
@@ -64,15 +64,15 @@ const fetchInstagramData = async (productName: string) => {
         }));
     } catch (error) {
         console.error('Error fetching Instagram data:', error);
-        return [{ platform: 'Instagram' as const, text: `This is a sample post for ${productName}. #sample`, username: 'preview_user', postUrl: 'https://www.instagram.com/p/C_2Z8Z_y_4b/' }];
+        return [];
     }
 };
 
 const fetchTwitterData = async (productName: string) => {
     const bearerToken = process.env.X_BEARER_TOKEN;
-    if (!bearerToken || bearerToken === 'YOUR_X_BEARER_TOKEN') {
-        console.warn("X_BEARER_TOKEN not found or is a placeholder. Returning mock data.");
-        return [{ platform: 'Twitter' as const, text: `Mock tweet about ${productName}! #mock`, username: 'mock_user', postUrl: 'https://twitter.com/Interior/status/1788574945131046400' }];
+    if (!bearerToken) {
+        console.warn("X_BEARER_TOKEN not found. Returning empty array.");
+        return [];
     }
     
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(productName)}&tweet.fields=text,author_id,id&expansions=author_id&max_results=10`;
@@ -96,7 +96,7 @@ const fetchTwitterData = async (productName: string) => {
         }));
     } catch (error) {
         console.error('Error fetching Twitter data:', error);
-        return [{ platform: 'Twitter' as const, text: `Mock tweet about ${productName}! #mock`, username: 'mock_user', postUrl: 'https://twitter.com/Interior/status/1788574945131046400' }];
+        return [];
     }
 };
 
@@ -119,14 +119,16 @@ const fetchRedditData = async (productName: string) => {
         }));
     } catch (error) {
         console.error('Error fetching Reddit data:', error);
-        return [{ platform: 'Reddit' as const, text: `A sample Reddit post about ${productName}`, username: 'reddit_user', postUrl: `https://www.reddit.com/r/all/` }];
+        return [];
     }
 };
 
 const fetchTikTokData = async (productName: string) => {
-    console.warn("TikTok API is not implemented. Returning mock data.");
+    // This is a placeholder since TikTok's public API is limited.
+    // In a real scenario, you'd use a service that has access to this data.
+    console.warn("TikTok API is not directly accessible, returning mock data.");
     return [
-        { platform: 'TikTok' as const, text: `Check out this amazing ${productName}! So cool! #fyp`, username: 'tiktok_trendsetter', postUrl: 'https://www.tiktok.com/@caseyrosenberg/video/7335122177439976747' },
+        { platform: 'TikTok' as const, text: `Check out this amazing ${productName}! So cool! #fyp`, username: 'tiktok_trendsetter', postUrl: '#' },
     ];
 };
 
