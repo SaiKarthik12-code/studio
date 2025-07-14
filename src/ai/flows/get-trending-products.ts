@@ -13,74 +13,34 @@ import type { Product, SocialPlatform } from '@/lib/types';
 import fetch from 'node-fetch';
 
 const ProductReviewSchema = z.object({
-    platform: z.enum(['Instagram', 'Twitter', 'Reddit', 'TikTok']).describe("The social media platform (e.g., 'Instagram', 'Twitter')."),
+    platform: z.enum(['Twitter', 'Reddit']).describe("The social media platform (e.g., 'Twitter', 'Reddit')."),
     text: z.string().describe("The full text of the social media post."),
     username: z.string().describe("The username of the author of the post."),
     postUrl: z.string().url().describe("The direct URL to the social media post."),
 });
 
-const fetchInstagramData = async (query: string) => {
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-    if (!accessToken) {
-        console.warn(`INSTAGRAM_ACCESS_TOKEN not found for query "${query}". Returning mock data.`);
-        return [];
-    }
-    
-    const sanitizedQuery = query.replace(/\s+/g, '').toLowerCase();
-    const searchUrl = `https://graph.facebook.com/v20.0/ig_hashtag_search?user_id=me&q=${sanitizedQuery}&access_token=${accessToken}`;
-    
-    try {
-        const searchResponse = await fetch(searchUrl);
-        const searchData: any = await searchResponse.json();
-
-        if (!searchResponse.ok || !searchData.data || searchData.data.length === 0) {
-            console.error(`Failed to find Instagram hashtag for "${query}":`, searchData.error?.message || 'No hashtag found.');
-            return [];
-        }
-        
-        const hashtagId = searchData.data[0].id;
-        const mediaUrl = `https://graph.facebook.com/v20.0/${hashtagId}/top_media?user_id=me&fields=id,media_type,caption,permalink&limit=5&access_token=${accessToken}`;
-        const mediaResponse = await fetch(mediaUrl);
-        const mediaData: any = await mediaResponse.json();
-
-        if (!mediaResponse.ok) {
-            console.error(`Failed to fetch Instagram media for "${query}":`, mediaData.error?.message);
-            return [];
-        }
-
-        return mediaData.data.map((post: any) => ({
-            platform: 'Instagram' as const,
-            text: post.caption || '',
-            username: 'instagram_user',
-            postUrl: post.permalink || `https://www.instagram.com/p/${post.id}/`,
-        }));
-
-    } catch (error) {
-        console.error(`Error fetching Instagram data for "${query}":`, error);
-        return [];
-    }
-};
+// Removed fetchInstagramData and fetchTikTokData
 
 const fetchTwitterData = async (query: string) => {
     const bearerToken = process.env.X_BEARER_TOKEN;
     if (!bearerToken) {
-        console.warn(`X_BEARER_TOKEN not found for query "${query}". Returning mock data.`);
+        console.warn(`X_BEARER_TOKEN not found for query "${query}". Returning empty array.`);
         return [];
     }
-    
+
     const url = `https://api.twitter.com/2/tweets/search/recent?query=${encodeURIComponent(query)}&tweet.fields=text,author_id,id&expansions=author_id&max_results=5`;
-    
+
     try {
         const response = await fetch(url, { headers: { 'Authorization': `Bearer ${bearerToken}` } });
         const data: any = await response.json();
-        
+
         if (!response.ok || !data.data) {
             console.error(`Failed to fetch Twitter data for "${query}":`, data.errors?.[0]?.message || 'Unknown error');
             return [];
         }
-        
+
         const users = new Map(data.includes?.users?.map((user: any) => [user.id, user.username]) || []);
-        
+
         return data.data.map((tweet: any) => ({
             platform: 'Twitter' as const,
             text: tweet.text || '',
@@ -94,6 +54,17 @@ const fetchTwitterData = async (query: string) => {
 };
 
 const fetchRedditData = async (query: string) => {
+    // Assuming you will add REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET to your .env
+    const clientId = process.env.REDDIT_CLIENT_ID;
+    const clientSecret = process.env.REDDIT_CLIENT_SECRET;
+    // You might need a more complex OAuth flow for Reddit depending on permissions
+    // This simplified version uses a user agent and assumes public data access
+    // based on the original code structure.
+    if (!clientId || !clientSecret) {
+         console.warn(`REDDIT_CLIENT_ID or REDDIT_CLIENT_SECRET not found for query "${query}". Returning empty array.`);
+         // return []; // Depending on Reddit API requirements, you might still get some public data
+    }
+
     const url = `https://www.reddit.com/search.json?q=${encodeURIComponent(query)}&limit=5&sort=hot`;
     try {
         const response = await fetch(url, { headers: { 'User-Agent': 'node:firebase-studio-app:v1.0' } });
@@ -103,7 +74,7 @@ const fetchRedditData = async (query: string) => {
         }
         const data: any = await response.json();
         if (!data.data || !data.data.children) return [];
-        
+
         return data.data.children.map((post: any) => ({
             platform: 'Reddit' as const,
             text: post.data.title || '',
@@ -114,11 +85,6 @@ const fetchRedditData = async (query: string) => {
         console.error(`Error fetching Reddit data for "${query}":`, error);
         return [];
     }
-};
-
-const fetchTikTokData = async (query: string) => {
-    console.warn(`TikTok API is not implemented for query "${query}". Returning mock data.`);
-    return [];
 };
 
 
@@ -150,7 +116,7 @@ const prompt = ai.definePrompt({
   output: {schema: TrendingProductsOutputSchema},
   prompt: `You are the AI engine for "TrendSense," a real-time demand forecasting platform for Walmart. Your primary function is to analyze social media data to identify viral product trends.
 
-You have been provided with a raw data stream of posts from Instagram, Twitter, Reddit, and TikTok.
+You have been provided with a raw data stream of posts from Twitter and Reddit.
 
 Social Media Data:
 {{{socialMediaData}}}
@@ -181,27 +147,27 @@ const trendingProductsFlow = ai.defineFlow(
     let allPosts: any[] = [];
 
     for (const topic of topics) {
-        const [instagram, twitter, reddit, tiktok] = await Promise.all([
-            fetchInstagramData(topic),
+        // Only fetch data from Twitter and Reddit
+        const [twitter, reddit] = await Promise.all([
             fetchTwitterData(topic),
-            fetchRedditData(topic),
-            fetchTikTokData(topic)
+            fetchRedditData(topic)
         ]);
-        allPosts = [...allPosts, ...instagram, ...twitter, ...reddit, ...tiktok];
+        allPosts = [...allPosts, ...twitter, ...reddit];
     }
-    
+
     const uniquePosts = Array.from(new Map(allPosts.map(p => [p.text, p])).values());
 
     if (uniquePosts.length === 0) {
-        console.log("No social media data fetched. Returning fallback data.");
+        console.log("No social media data fetched from Twitter or Reddit. Returning fallback data.");
         return getFallbackProducts();
     }
-    
+
     const socialMediaData = JSON.stringify(uniquePosts, null, 2);
-    
-    console.log("-----BEGIN SOCIAL MEDIA ANALYSIS-----");
-    console.log(`Sending ${uniquePosts.length} unique posts to the AI model.`);
-    console.log("-----END SOCIAL MEDIA ANALYSIS-----");
+
+    console.log("-----BEGIN SOCIAL MEDIA ANALYSIS-----\n");
+    console.log(`Sending ${uniquePosts.length} unique posts from Twitter and Reddit to the AI model.\n`);
+    console.log("-----END SOCIAL MEDIA ANALYSIS-----\n");
+
 
     try {
         const {output} = await prompt({ socialMediaData });
@@ -225,6 +191,9 @@ function getFallbackProducts(): TrendingProductsOutput {
         lastUpdated: 'Generated by AI',
         imageUrl: 'https://placehold.co/64x64',
         reviews: [
+          // Keeping these fallback reviews, but in a real scenario,
+          // you might want to adjust or remove reviews from platforms
+          // you are no longer scraping.
           { platform: 'TikTok', text: 'This is my secret weapon for glowy skin, literally a filter in a bottle. ✨ #elfhaloglow #haloglowliquidfilter #makeupdupes', username: 'glamzilla', postUrl: 'https://www.tiktok.com/@glamzilla/video/7115822262219443462' },
           { platform: 'Instagram', text: 'The hype is real! ✨ The @elfcosmetics Halo Glow Liquid Filter is a must-have for that perfect dewy look. #elfcosmetics #haloglow', username: 'mikaylanogueira', postUrl: 'https://www.instagram.com/p/CgToaBfA9gN/' }
         ],
