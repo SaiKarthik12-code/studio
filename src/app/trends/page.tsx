@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { analyzeSocialTrends, AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends';
+import { analyzeSocialTrends } from '@/ai/flows/analyze-social-trends';
+import { AnalyzeSocialTrendsOutput } from '@/ai/flows/analyze-social-trends.types';
 import PageHeader from '@/components/shared/page-header';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -99,7 +100,7 @@ export default function TrendMiningPage() {
                 <div className="space-y-2">
                   <Label>Social Platforms</Label>
                     <div className="p-2 rounded-md bg-muted text-sm text-muted-foreground">
-                        Analyzing Instagram, Twitter/X, Reddit & TikTok (simulated).
+                        Analyzing Instagram, Twitter/X, Reddit & TikTok.
                     </div>
                 </div>
                 <Button type="submit" className="w-full" disabled={isLoading}>
