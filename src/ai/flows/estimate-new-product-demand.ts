@@ -30,7 +30,7 @@ const EstimateNewProductDemandOutputSchema = z.object({
 export type EstimateNewProductDemandOutput = z.infer<typeof EstimateNewProductDemandOutputSchema>;
 
 export async function estimateNewProductDemand(input: EstimateNewProductDemandInput): Promise<EstimateNewProductDemandOutput> {
-  return estimateNewProductDemandFlow(input);
+  return await estimateNewProductDemandFlow(input);
 }
 
 const prompt = ai.definePrompt({
@@ -61,7 +61,14 @@ const estimateNewProductDemandFlow = ai.defineFlow(
     outputSchema: EstimateNewProductDemandOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    const { output } = await prompt(input);
+
+if (!output) {
+  console.error('Prompt returned undefined');
+  throw new Error('Prompt execution failed');
+}
+
+return output;
+
   }
 );
