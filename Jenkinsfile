@@ -7,8 +7,8 @@ pipeline {
         PATH = "${NODEJS_HOME}/bin:${env.PATH}"
 
         // !! IMPORTANT: Replace these placeholders with your actual values !!
-        APP_DIR = "/home/ubuntu/Movie-review-app" // The absolute path to your app's root on the EC2 instance
-        EC2_IP = "3.7.66.211" // Your EC2 Public IP address
+        APP_DIR = "/home/ubuntu/studio" // The absolute path to your app's root on the EC2 instance
+        EC2_IP = "13.204.67.170" // Your EC2 Public IP address
         EC2_USER = "ubuntu" // The SSH username for your EC2 instance (usually 'ubuntu' for Ubuntu AMIs)
         SSH_CREDENTIAL_ID = "my-key-pair.pem" // The ID of the SSH credential you created in Jenkins
 
@@ -19,9 +19,9 @@ pipeline {
     stages {
         stage('Checkout Code') {
             steps {
-                git branch: 'main', url: 'https://github.com/SaiKarthik12-code/Movie-review-app.git'
+                git branch: 'master', url: 'https://github.com/SaiKarthik12-code/studio.git'
                 // If your GitHub repo is private and requires Jenkins credentials, use:
-                // git credentialsId: 'your-github-credential-id', branch: 'main', url: 'https://github.com/SaiKarthik12-code/Movie-review-app.git'
+                // git credentialsId: 'your-github-credential-id', branch: 'master', url: 'https://github.com/SaiKarthik12-code/studio.git'
             }
         }
 
