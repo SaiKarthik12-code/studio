@@ -9,7 +9,7 @@
  * - AnalyzeSocialTrendsInput - The input type for the analyzeSocialTrends function.
  * - AnalyzeSocialTrendsOutput - The return type for the analyzeSocialTrends function.
  */
-
+'use server';
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 import vader from 'vader-sentiment';
@@ -26,47 +26,6 @@ const analyzeText = (text: string): string[] => {
   // simple topic extraction using regex for hashtags
   return text.toLowerCase().match(/#\w+/g)?.map(tag => tag.substring(1)) || [];
 }
-
-const fetchInstagramData = async (productName: string) => {
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-    if (!accessToken) {
-        console.warn("INSTAGRAM_ACCESS_TOKEN not found. Returning empty array.");
-        return [];
-    }
-    
-    const sanitizedProductName = productName.replace(/\s+/g, '').toLowerCase();
-    const searchUrl = `https://graph.facebook.com/v20.0/ig_hashtag_search?user_id=me&q=${sanitizedProductName}&access_token=${accessToken}`;
-    
-    try {
-        const searchResponse = await fetch(searchUrl);
-        const searchData: any = await searchResponse.json();
-
-        if (!searchResponse.ok || !searchData.data || searchData.data.length === 0) {
-            console.error('Failed to find Instagram hashtag or no data available:', searchData.error?.message || 'No hashtag found.');
-            return [];
-        }
-        
-        const hashtagId = searchData.data[0].id;
-        const mediaUrl = `https://graph.facebook.com/v20.0/${hashtagId}/top_media?user_id=me&fields=id,media_type,caption,permalink&limit=10&access_token=${accessToken}`;
-        const mediaResponse = await fetch(mediaUrl);
-        const mediaData: any = await mediaResponse.json();
-
-        if (!mediaResponse.ok) {
-            console.error('Failed to fetch Instagram media:', mediaData.error?.message);
-            return [];
-        }
-
-        return mediaData.data.map((post: any) => ({
-            platform: 'Instagram' as const,
-            text: post.caption || '',
-            username: 'instagram_user',
-            postUrl: post.permalink || `https://www.instagram.com/p/${post.id}/`,
-        }));
-    } catch (error) {
-        console.error('Error fetching Instagram data:', error);
-        return [];
-    }
-};
 
 const fetchTwitterData = async (productName: string) => {
     const bearerToken = process.env.X_BEARER_TOKEN;
@@ -123,23 +82,12 @@ const fetchRedditData = async (productName: string) => {
     }
 };
 
-const fetchTikTokData = async (productName: string) => {
-    // This is a placeholder since TikTok's public API is limited.
-    // In a real scenario, you'd use a service that has access to this data.
-    console.warn("TikTok API is not directly accessible, returning mock data.");
-    return [
-        { platform: 'TikTok' as const, text: `Check out this amazing ${productName}! So cool! #fyp`, username: 'tiktok_trendsetter', postUrl: '#' },
-    ];
-};
-
 const AnalyzeSocialTrendsInputSchema = z.object({
   productName: z.string().describe('The name of the product to analyze.'),
 });
-export type AnalyzeSocialTrendsInput = z.infer<
-  typeof AnalyzeSocialTrendsInputSchema
->;
+export type AnalyzeSocialTrendsInput = z.infer<typeof AnalyzeSocialTrendsInputSchema>;
 
-const AnalyzeSocialTrendsOutputSchema = z.object({
+export const AnalyzeSocialTrendsOutputSchema = z.object({
   overallSentiment: z
     .string()
     .describe('The overall sentiment towards the product.'),
@@ -148,12 +96,10 @@ const AnalyzeSocialTrendsOutputSchema = z.object({
     .describe('The trending topics related to the product.'),
   volume: z.number().describe('The volume of mentions of the product.'),
   sentimentBreakdown: z.object({
-    Instagram: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
     Twitter: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
     Reddit: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
-    TikTok: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
   }).describe('Sentiment breakdown by platform with specific sentiment values.'),
-});
+}).describe('The output of the social media trend analysis.');
 export type AnalyzeSocialTrendsOutput = z.infer<
   typeof AnalyzeSocialTrendsOutputSchema
 >;
@@ -174,22 +120,19 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
     const { productName } = input;
     
     const sentimentBreakdown: AnalyzeSocialTrendsOutput["sentimentBreakdown"] = {
-      Instagram: { positive: 0, negative: 0, neutral: 0 },
       Twitter: { positive: 0, negative: 0, neutral: 0 },
       Reddit: { positive: 0, negative: 0, neutral: 0 },
-      TikTok: { positive: 0, negative: 0, neutral: 0 },
     };
+    
 
     const trendingTopics = new Set<string>();
 
-    const [instagramData, twitterData, redditData, tiktokData] = await Promise.all([
-        fetchInstagramData(productName),
+    const [twitterData, redditData] = await Promise.all([ // Removed Instagram and TikTok
         fetchTwitterData(productName),
         fetchRedditData(productName),
-        fetchTikTokData(productName)
     ]);
 
-    const allData = [...instagramData, ...twitterData, ...redditData, ...tiktokData];
+    const allData = [...twitterData, ...redditData]; // Removed instagramData and tiktokData
     let totalMentions = 0;
 
     for (const item of allData) {
@@ -198,11 +141,12 @@ const analyzeSocialTrendsFlow = ai.defineFlow(
       if (text) {
         const score = analyzeSentiment(text);
         if (score >= 0.05) {
-          sentimentBreakdown[item.platform].positive++;
+          const platform = item.platform as keyof AnalyzeSocialTrendsOutput['sentimentBreakdown'];
+          sentimentBreakdown[platform].positive++;
         } else if (score <= -0.05) {
-          sentimentBreakdown[item.platform].negative++;
+          sentimentBreakdown[item.platform as keyof AnalyzeSocialTrendsOutput['sentimentBreakdown']].negative++;
         } else {
-          sentimentBreakdown[item.platform].neutral++;
+          sentimentBreakdown[item.platform as keyof AnalyzeSocialTrendsOutput['sentimentBreakdown']].neutral++;
         }
         
         const topics = analyzeText(text);
