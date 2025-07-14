@@ -41,7 +41,8 @@ const fetchTwitterData = async (productName: string) => {
         const data: any = await response.json();
         
         if (!response.ok || !data.data) {
-            console.error('Failed to fetch Twitter data:', data.errors?.[0]?.message || 'Unknown error');
+            console.error(`Failed to fetch Twitter data: Status ${response.status}, Body: ${JSON.stringify(data)}`);
+ console.error('Twitter API error details:', data.errors?.[0]?.message || 'No specific error message');
             return [];
         }
         
@@ -54,7 +55,7 @@ const fetchTwitterData = async (productName: string) => {
             postUrl: `https://twitter.com/${users.get(tweet.author_id) || 'i'}/status/${tweet.id}`,
         }));
     } catch (error) {
-        console.error('Error fetching Twitter data:', error);
+        console.error('Error fetching Twitter data:', error instanceof Error ? error.message : error);
         return [];
     }
 };
@@ -64,7 +65,7 @@ const fetchRedditData = async (productName: string) => {
     try {
         const response = await fetch(url, { headers: { 'User-Agent': 'node:firebase-studio-app:v1.0' } });
         if (!response.ok) {
-            console.error('Failed to fetch Reddit data:', response.statusText);
+            console.error(`Failed to fetch Reddit data: Status ${response.status}, Body: ${await response.text()}`);
             return [];
         }
         const data: any = await response.json();
