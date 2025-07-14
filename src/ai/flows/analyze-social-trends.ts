@@ -5,14 +5,9 @@
  */
 
 import { ai } from '@/ai/genkit';
+import { z } from 'genkit';
 import vader from 'vader-sentiment';
 import fetch from 'node-fetch';
-import {
-  AnalyzeSocialTrendsInput,
-  AnalyzeSocialTrendsInputSchema,
-  AnalyzeSocialTrendsOutput,
-  AnalyzeSocialTrendsOutputSchema,
-} from './analyze-social-trends.types';
 
 const analyzeSentiment = (text: string): number => {
   if (!text) return 0;
@@ -26,16 +21,16 @@ const analyzeText = (text: string): string[] => {
 };
 
 interface SocialDataItem {
-  platform: 'Twitter' | 'Reddit' | 'Instagram' | 'TikTok';
+  platform: 'Twitter' | 'Reddit';
   text: string;
   username: string;
   postUrl: string;
 }
 
 const fetchTwitterData = async (productName: string): Promise<SocialDataItem[]> => {
-  const bearerToken = process.env.X_BEARER_TOKEN;
+  const bearerToken = process.env.TWITTER_BEARER_TOKEN;
   if (!bearerToken) {
-    console.warn("X_BEARER_TOKEN not found. Returning empty array for Twitter.");
+    console.warn("TWITTER_BEARER_TOKEN not found. Returning empty array.");
     return [];
   }
 
@@ -49,17 +44,23 @@ const fetchTwitterData = async (productName: string): Promise<SocialDataItem[]> 
 
     if (!response.ok || !data.data) {
       console.error(`Failed to fetch Twitter data: Status ${response.status}, Body: ${JSON.stringify(data)}`);
+      console.error('Twitter API error details:', data.errors?.[0]?.message || 'No specific error message');
       return [];
     }
 
-    const users = new Map((data.includes?.users || []).map((user: any) => [user.id, user.username]));
+    const usersMap = new Map((data.includes?.users || []).map((user: any) => [user.id, user.username]));
 
-    return data.data.map((tweet: any): SocialDataItem => ({
-      platform: 'Twitter',
-      text: tweet.text || '',
-      username: users.get(tweet.author_id) || 'twitter_user',
-      postUrl: `https://twitter.com/${users.get(tweet.author_id) || 'i'}/status/${tweet.id}`,
-    }));
+    return data.data.map((tweet: any): SocialDataItem => {
+      const rawUsername = usersMap.get(tweet.author_id);
+      const username = typeof rawUsername === 'string' ? rawUsername : 'twitter_user';
+
+      return {
+        platform: 'Twitter',
+        text: typeof tweet.text === 'string' ? tweet.text : '',
+        username,
+        postUrl: `https://twitter.com/${username}/status/${tweet.id}`,
+      };
+    });
   } catch (error) {
     console.error('Error fetching Twitter data:', error instanceof Error ? error.message : error);
     return [];
@@ -72,7 +73,7 @@ const fetchRedditData = async (productName: string): Promise<SocialDataItem[]> =
   const userAgent = process.env.REDDIT_USER_AGENT || 'TrendSense/0.1 by yourusername';
 
   if (!clientId || !clientSecret) {
-    console.warn("Reddit credentials missing. Returning empty array for Reddit.");
+    console.warn("Reddit credentials missing. Returning empty array.");
     return [];
   }
 
@@ -108,9 +109,9 @@ const fetchRedditData = async (productName: string): Promise<SocialDataItem[]> =
 
     return data.data.children.map((post: any): SocialDataItem => ({
       platform: 'Reddit',
-      text: post.data?.title || '',
-      username: post.data?.author || 'reddit_user',
-      postUrl: `https://www.reddit.com${post.data?.permalink || ''}`,
+      text: typeof post.data?.title === 'string' ? post.data.title : '',
+      username: typeof post.data?.author === 'string' ? post.data.author : 'reddit_user',
+      postUrl: `https://www.reddit.com${typeof post.data?.permalink === 'string' ? post.data.permalink : ''}`,
     }));
   } catch (error) {
     console.error('Error fetching Reddit data:', error instanceof Error ? error.message : error);
@@ -118,28 +119,21 @@ const fetchRedditData = async (productName: string): Promise<SocialDataItem[]> =
   }
 };
 
-const fetchInstagramData = async (productName: string): Promise<SocialDataItem[]> => {
-    const accessToken = process.env.INSTAGRAM_ACCESS_TOKEN;
-    if (!accessToken) {
-        console.warn("INSTAGRAM_ACCESS_TOKEN not found. Returning empty array for Instagram.");
-        return [];
-    }
-    // This is a simplified simulation as Instagram's public API is limited.
-    // In a real scenario, you'd use the Graph API for hashtag searches.
-    return [
-        { platform: 'Instagram', text: `Loving my new ${productName}! #ad`, username: 'influencer123', postUrl: 'https://www.instagram.com/p/C8_somepostid/' },
-        { platform: 'Instagram', text: `Is the ${productName} worth the hype?`, username: 'tech_reviewer', postUrl: 'https://www.instagram.com/p/C8_anotherpost/' },
-    ];
-};
+const AnalyzeSocialTrendsInputSchema = z.object({
+  productName: z.string().describe('The name of the product to analyze.')
+});
+export type AnalyzeSocialTrendsInput = z.infer<typeof AnalyzeSocialTrendsInputSchema>;
 
-const fetchTikTokData = async (productName: string): Promise<SocialDataItem[]> => {
-    // TikTok's API is restrictive; this is a simulated endpoint.
-    return [
-        { platform: 'TikTok', text: `${productName} unboxing! #viral`, username: 'tiktok_star', postUrl: 'https://www.tiktok.com/t/ZPRvy_someid/' },
-        { platform: 'TikTok', text: `My honest review of the ${productName}`, username: 'user98765', postUrl: 'https://www.tiktok.com/t/ZPRvy_anotherid/' },
-    ];
-};
-
+export const AnalyzeSocialTrendsOutputSchema = z.object({
+  overallSentiment: z.string().describe('The overall sentiment towards the product.'),
+  trendingTopics: z.array(z.string()).describe('The trending topics related to the product.'),
+  volume: z.number().describe('The volume of mentions of the product.'),
+  sentimentBreakdown: z.object({
+    Twitter: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
+    Reddit: z.object({ positive: z.number(), negative: z.number(), neutral: z.number() }),
+  }).describe('Sentiment breakdown by platform.')
+});
+export type AnalyzeSocialTrendsOutput = z.infer<typeof AnalyzeSocialTrendsOutputSchema>;
 
 export async function analyzeSocialTrends(input: AnalyzeSocialTrendsInput): Promise<AnalyzeSocialTrendsOutput> {
   return analyzeSocialTrendsFlow(input);
@@ -155,20 +149,16 @@ const analyzeSocialTrendsFlow = ai.defineFlow({
   const sentimentBreakdown: AnalyzeSocialTrendsOutput["sentimentBreakdown"] = {
     Twitter: { positive: 0, negative: 0, neutral: 0 },
     Reddit: { positive: 0, negative: 0, neutral: 0 },
-    Instagram: { positive: 0, negative: 0, neutral: 0 },
-    TikTok: { positive: 0, negative: 0, neutral: 0 },
   };
 
   const trendingTopics = new Set<string>();
 
-  const [twitterData, redditData, instagramData, tiktokData] = await Promise.all([
+  const [twitterData, redditData] = await Promise.all([
     fetchTwitterData(productName),
     fetchRedditData(productName),
-    fetchInstagramData(productName),
-    fetchTikTokData(productName),
   ]);
 
-  const allData: SocialDataItem[] = [...twitterData, ...redditData, ...instagramData, ...tiktokData];
+  const allData: SocialDataItem[] = [...twitterData, ...redditData];
   let totalMentions = 0;
 
   for (const item of allData) {
